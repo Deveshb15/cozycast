@@ -8,12 +8,14 @@ import { useFonts } from 'expo-font'
 import { SplashScreen, Stack } from 'expo-router'
 import { FarcasterUser, NeynarProvider } from 'farcasterkit-react-native'
 import { useEffect, useState } from 'react'
-import { useColorScheme } from 'react-native'
+import { useColorScheme, Dimensions } from 'react-native'
 import AppContext from '../utils/context'
 import GuestHeaderLeft from '../components/GuestHeaderLeft'
 import HomeHeaderLeft from '../components/HomeHeaderLeft'
 import HomeHeaderRight from '../components/HomeHeaderRight'
 import React from 'react'
+import { NeynarContextProvider, Theme } from "@neynar/react";
+import "@neynar/react/dist/style.css";
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -65,6 +67,17 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme()
   const neynarApiKey = process.env.EXPO_PUBLIC_NEYNAR_API_KEY
   const fckitApiUrl = process.env.EXPO_PUBLIC_API_URL
+  const neynarClientId = process.env.EXPO_PUBLIC_NEYNAR_CLIENT_ID
+
+  const screenWidth = Dimensions.get('window').width;
+
+  const isMobileDevice = screenWidth <= 768;
+
+  // const handleSignin = async (data: ISuccessMessage) => {
+  //   setFid(Number(data.fid))
+  //   setSignerUuid(data.signer_uuid)
+  // }
+
 
   return (
     <AppContext.Provider value={{ fid, setFid, filter, setFilter, user, setUser }}>
@@ -72,6 +85,16 @@ function RootLayoutNav() {
         apiKey={neynarApiKey as string}
         fcKitApiUrl={fckitApiUrl as string}
       >
+        <NeynarContextProvider 
+        settings={{
+          clientId: neynarClientId || "",
+          eventsCallbacks: {
+            onAuthSuccess: () => {},
+            onSignout() {},
+          },
+        }}
+      >
+
         <ThemeProvider
           value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
         >
@@ -89,6 +112,7 @@ function RootLayoutNav() {
             />
           </Stack>
         </ThemeProvider>
+      </NeynarContextProvider>
       </NeynarProvider>
     </AppContext.Provider>
   )

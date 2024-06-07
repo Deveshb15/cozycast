@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  Dimensions
 } from 'react-native'
 import SignInWithNeynar from '../components/SignInWithNeynar'
 import { Text, View } from '../components/Themed'
@@ -15,17 +16,28 @@ import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useAppContext from '../hooks/useAppContext'
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
+import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
+
 
 export default function IndexScreen() {
   const { farcasterUser } = useLogin()
   const { setFid, setFilter, setUser } = useAppContext()
   const router = useRouter()
+  const { user } = useNeynarContext();
+
   useEffect(() => {
     if (farcasterUser) {
       router.push('/(tabs)')
     }
   }, [farcasterUser])
 
+  const screenWidth = Dimensions.get('window').width;
+
+  const isMobileDevice = screenWidth <= 768;
+
+  console.log('isMobileDevice', isMobileDevice)
+
+  console.log('user', user)
   useEffect(() => {
     const getUser = async () => {
       let user = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FARCASTER_USER)
@@ -53,7 +65,17 @@ export default function IndexScreen() {
         <Text style={styles.subtitle}>
           A beautiful yet simple Farcaster client
         </Text>
+        <View>
+        {isMobileDevice? (
         <SignInWithNeynar />
+      ) : (
+        <View style={{width:'100%', backgroundColor:'white'}}>
+          <View style={{width:'50%'}}>
+          <NeynarAuthButton />
+            </View>
+        </View>
+      )}
+        </View>
         <ConnectAsGuest />
       </View>
     </SafeAreaView>
@@ -65,7 +87,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     backgroundColor: 'white',
-    color: 'black',
+    // color: 'black',
   },
   textContainer: {
     marginTop: '20%',
@@ -86,4 +108,5 @@ const styles = StyleSheet.create({
     height: undefined,
     aspectRatio: 2150 / 200,
   },
+  
 })

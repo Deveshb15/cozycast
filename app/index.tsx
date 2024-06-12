@@ -17,7 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import useAppContext from '../hooks/useAppContext'
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
 import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
-
+import WebSignIn from '../components/WebSignIn'
 
 export default function IndexScreen() {
   const { farcasterUser } = useLogin()
@@ -69,10 +69,8 @@ export default function IndexScreen() {
         {isMobileDevice? (
         <SignInWithNeynar />
       ) : (
-        <View style={{width:'100%', backgroundColor:'white'}}>
-          <View style={{width:'50%'}}>
-          <NeynarAuthButton />
-            </View>
+        <View style={{width:'50%', backgroundColor:'white'}}>
+          <WebSignIn />
         </View>
       )}
         </View>
@@ -108,5 +106,4 @@ const styles = StyleSheet.create({
     height: undefined,
     aspectRatio: 2150 / 200,
   },
-  
 })

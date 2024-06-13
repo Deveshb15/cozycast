@@ -74,7 +74,7 @@ export default function IndexScreen() {
         </View>
       )}
         </View>
-        <ConnectAsGuest />
+        {/* <ConnectAsGuest /> */}
       </View>
     </SafeAreaView>
   )

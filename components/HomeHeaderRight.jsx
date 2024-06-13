@@ -24,12 +24,6 @@ const HomeHeaderRight = () => {
   return (
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-        <Pressable onPress={() => { handleSelect('home'); router.push(`/(tabs)/channel?type=home&fid=${fid}`); }}>
-          <Text style={[styles.linkText, { opacity: isSelected === 'home' ? 1 : 0.4 }]}>Following</Text>
-        </Pressable>
-        <Pressable onPress={() => { handleSelect('trending'); router.push('/(tabs)/channel?type=trending'); }}>
-          <Text style={[styles.linkText, { opacity: isSelected === 'trending' ? 1 : 0.4 }]}>Trending</Text>
-        </Pressable>
         <Pressable onPress={() => { handleSelect('filter'); router.push(`/(tabs)/channel?type=channel&fid=${fid}`); }}>
           <Text style={[styles.linkText, { opacity: isSelected === 'filter' ? 1 : 0.4 }]}>Filtered Feed</Text>
         </Pressable>

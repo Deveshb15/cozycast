@@ -25,7 +25,7 @@ const HomeHeaderRight = () => {
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
         <Pressable onPress={() => { handleSelect('filter'); router.push(`/(tabs)/channel?type=channel&fid=${fid}`); }}>
-          <Text style={[styles.linkText, { opacity: isSelected === 'filter' ? 1 : 0.4 }]}>Filtered Feed</Text>
+          <Text style={[styles.linkText, { opacity: isSelected === 'filter' ? 1 : 0.4 }]}>CozyCast</Text>
         </Pressable>
       </ScrollView>
       <Pressable onPress={() => handlePressNotAvailable('Search')}>

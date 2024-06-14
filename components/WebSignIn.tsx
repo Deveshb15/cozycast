@@ -14,9 +14,8 @@ import axios from 'axios'
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
-import { API_URL, COMPUTER_IP_ADDRESS } from '../constants'
 import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
-
+import './styles.css'
 
 export default function WebSignIn() {
   const { farcasterUser, setFarcasterUser } = useLogin()

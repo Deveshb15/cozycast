@@ -66,13 +66,9 @@ export default function IndexScreen() {
           A beautiful yet simple Farcaster client
         </Text>
         <View>
-        {isMobileDevice? (
-        <SignInWithNeynar />
-      ) : (
-        <View style={{width:'50%', backgroundColor:'white'}}>
+        <View style={{width:'50%', marginTop:40, marginLeft:25}}>
           <WebSignIn />
         </View>
-      )}
         </View>
         {/* <ConnectAsGuest /> */}
       </View>

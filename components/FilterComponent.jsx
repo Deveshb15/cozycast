@@ -6,9 +6,11 @@ import useAppContext from '../hooks/useAppContext';
 import { useSearchChannel } from '../hooks/useSearchChannels';
 import { debounce } from 'lodash';
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster';
+import toast from 'react-hot-toast/headless'
+import { eventEmitter } from '../utils/event';
 
 const FilterModal = ({ visible, onClose }) => {
-  const { filter, setFilter } = useAppContext();
+  const { filter, setFilter, setFilterChange } = useAppContext();
   const [minFID, setMinFID] = useState(0);
   const [maxFID, setMaxFID] = useState(Infinity);
   const [searchChannels, setSearchChannels] = useState('');
@@ -17,8 +19,12 @@ const FilterModal = ({ visible, onClose }) => {
   const [fetchedMutedChannels, setFetchedMutedChannels] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
   const [selectedMutedChannels, setSelectedMutedChannels] = useState([]);
+  const [isPowerBadgeHolder, setIsPowerBadgeHolder] = useState(false);
 
   const handleClearAll = useCallback(() => {
+    toast('Filters Removd', {
+      icon: '❌',
+    });
     setMinFID(0);
     setMaxFID(Infinity);
     setSearchChannels('');
@@ -30,18 +36,22 @@ const FilterModal = ({ visible, onClose }) => {
       upperFid: Infinity,
       showChannels: [],
       mutedChannels: [],
+      isPowerBadgeHolder: false,
     })
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify({
       lowerFid: 0,
       upperFid: Infinity,
       showChannels: [],
       mutedChannels: [],
+      isPowerBadgeHolder: false,
     }));
+    setFilterChange((prev) => !prev);
   }, []);
 
   const updateFilter = useCallback((newFilter) => {
     setFilter(newFilter);
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter));
+    setFilterChange((prev) => !prev);
   }, [setFilter]);
 
   const handleSetMaxFID = (text) => {
@@ -50,16 +60,21 @@ const FilterModal = ({ visible, onClose }) => {
   };
 
   const handleApply = useCallback(() => {
+    toast('Filters Applied', {
+      icon: '🔥',
+    });
+
     const newFilter = {
       ...filter,
       lowerFid: minFID,
       upperFid: maxFID,
       showChannels: [...selectedChannels],
       mutedChannels: [...selectedMutedChannels],
+      isPowerBadgeHolder,
     };
     updateFilter(newFilter);
     onClose();
-  }, [filter, minFID, maxFID, selectedChannels, selectedMutedChannels, onClose, updateFilter]);
+  }, [filter, minFID, maxFID, selectedChannels, selectedMutedChannels, isPowerBadgeHolder, onClose, updateFilter]);
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -71,6 +86,8 @@ const FilterModal = ({ visible, onClose }) => {
         setMaxFID(parsedFilters.upperFid);
         setSelectedChannels(parsedFilters.showChannels);
         setSelectedMutedChannels(parsedFilters.mutedChannels);
+        setFilterChange((prev) => !prev);
+        setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder);
       }
     };
     fetchFilters();
@@ -122,6 +139,23 @@ const FilterModal = ({ visible, onClose }) => {
     setFetchedMutedChannels([])
   }
 
+  useEffect(() => {
+    eventEmitter.emit('filterChanged', filter);
+  }, [filter]);
+
+  useEffect(() => {
+    const handleApplyFilter = (newFilter) => {
+      updateFilter(newFilter);
+      AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter));
+    }
+
+    eventEmitter.on('filterChanged', handleApplyFilter)
+
+    return () => {
+      eventEmitter.off('filterChanged', handleApplyFilter)
+    }
+  }, [])
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
@@ -142,6 +176,12 @@ const FilterModal = ({ visible, onClose }) => {
                 <TextInput style={styles.input} value={maxFID?.toString() === 'Infinity' ? '' : maxFID?.toString()} onChangeText={handleSetMaxFID} keyboardType="numeric" />
               </View>
             </View>
+            <Text style={styles.sectionHeader}>Power Badge Holder</Text>
+            {/* Checkbox */}
+            <TouchableOpacity onPress={() => setIsPowerBadgeHolder(!isPowerBadgeHolder)} style={styles.channelContainer}>
+              <Text>{isPowerBadgeHolder ? '✅' : '❌'}</Text>
+              <Text style={{ marginLeft: 4 }}>Power Badge Holder</Text>
+            </TouchableOpacity>
             <Text style={styles.sectionHeader}>Search Channels</Text>
             <TextInput style={styles.searchInput} value={searchChannels} onChangeText={setSearchChannels} placeholder="Search channels" />
             {fetchedChannels?.slice(0,5).map((channel) => (
@@ -180,7 +220,7 @@ const FilterModal = ({ visible, onClose }) => {
             </View>
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.clearButton} onPress={handleClearAll}>
-                <Text style={styles.buttonText}>Clear All</Text>
+                <Text style={{...styles.buttonText, color: "#000"}}>Clear All</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
                 <Text style={styles.buttonText}>Apply</Text>
@@ -293,6 +333,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'gray',
     borderRadius: 10,
+    padding: 10,
   },
   channelImage: {
     width: 24,

@@ -24,9 +24,12 @@ const TabOneScreen = () => {
         keyExtractor={(_, index) => index.toString()}
         onEndReached={onEndReached}
         onEndReachedThreshold={0.1}
+        estimatedItemSize={100}
         ListFooterComponent={() =>
           isLoading && !isReachingEnd ? (
-            <ActivityIndicator size="large" color="#000000" />
+            <View style={styles.loader}>
+               <ActivityIndicator size="large" color="#000000" />
+            </View>
           ) : null
         }
       />
@@ -43,6 +46,12 @@ const styles = StyleSheet.create({
   flashList: {
     backgroundColor: '#fff',
   },
+  loader:{
+    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height:'50%'
+  }
 })
 
 export default TabOneScreen

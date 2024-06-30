@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   StyleSheet,
   Image,
@@ -22,6 +22,7 @@ import WebSignIn from '../components/WebSignIn'
 export default function IndexScreen() {
   const { farcasterUser } = useLogin()
   const { setFid, setFilter, setUser } = useAppContext()
+  const [login, setLogin] = useState(false)
   const router = useRouter()
   const { user } = useNeynarContext();
 
@@ -57,10 +58,28 @@ export default function IndexScreen() {
     getUser()
   }, [])
 
+  const buttonLabel = (label: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined) => {
+    return(
+      <View style={{
+        padding: 12
+      }}>
+        <Text style={{
+          color: 'black',
+          fontWeight: '600',
+          fontSize: 26,
+        }}>
+          {label}
+        </Text>
+      </View>
+    )
+  }
+  
   return (
     <SafeAreaView style={styles.container}>
       {/* <Image style={styles.homepageHeader} source={homepageHeader} resizeMode="contain" /> */}
-      <View style={styles.textContainer}>
+    
+    
+   <View style={styles.textContainer}>
         <Text style={styles.title}>Cozycast</Text>
         <Text style={styles.subtitle}>
           A beautiful yet simple Farcaster client
@@ -70,9 +89,8 @@ export default function IndexScreen() {
           <WebSignIn />
         </View>
         </View>
-        {/* <ConnectAsGuest /> */}
-      </View>
-    </SafeAreaView>
+        </View>
+        </SafeAreaView>
   )
 }
 

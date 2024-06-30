@@ -57,11 +57,13 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const [fid, setFid] = useState(404104)
   const [user, setUser] = useState<FarcasterUser | null>(null)
+  const [filterChange, setFilterChange] = useState(false)
   const [filter, setFilter] = useState({
     lowerFid: 0,
     upperFid: Infinity,
     mutedChannels: [],
     showChannels: [],
+    isPowerBadgeHolder: false,
   })
 
   const colorScheme = useColorScheme()
@@ -80,7 +82,7 @@ function RootLayoutNav() {
 
 
   return (
-    <AppContext.Provider value={{ fid, setFid, filter, setFilter, user, setUser }}>
+    <AppContext.Provider value={{ fid, setFid, filter, setFilter, user, setUser, filterChange, setFilterChange }}>
       <NeynarProvider
         apiKey={neynarApiKey as string}
         fcKitApiUrl={fckitApiUrl as string}

@@ -16,19 +16,19 @@ import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useAppContext from '../hooks/useAppContext'
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
-import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
 import WebSignIn from '../components/WebSignIn'
+import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
 
 export default function IndexScreen() {
   const { farcasterUser } = useLogin()
-  const { setFid, setFilter, setUser } = useAppContext()
+  const { fid, setFid, setFilter, setUser } = useAppContext()
   const [login, setLogin] = useState(false)
   const router = useRouter()
   const { user } = useNeynarContext();
 
   useEffect(() => {
     if (farcasterUser) {
-      router.push('/(tabs)')
+      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 404104}` as any)
     }
   }, [farcasterUser])
 
@@ -46,7 +46,7 @@ export default function IndexScreen() {
         const parsedUser : FarcasterUser = JSON.parse(user)
         setFid(parsedUser?.fid || 404104)
         setUser(parsedUser)
-        router.push('/(tabs)')
+        router.push(`/(tabs)/channel?type=channel&fid=${fid}` as any)
       }
 
       let filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
@@ -61,7 +61,8 @@ export default function IndexScreen() {
   const buttonLabel = (label: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined) => {
     return(
       <View style={{
-        padding: 12
+        padding: 12,
+        backgroundColor: 'white'
       }}>
         <Text style={{
           color: 'black',

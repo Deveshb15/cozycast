@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppContext from '../hooks/useAppContext';
@@ -8,6 +8,9 @@ import { debounce } from 'lodash';
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster';
 import toast from 'react-hot-toast/headless'
 import { eventEmitter } from '../utils/event';
+import axios from 'axios';
+import { API_URL } from '../constants'
+
 
 const FilterModal = ({ visible, onClose }) => {
   const { filter, setFilter, setFilterChange } = useAppContext();
@@ -20,6 +23,12 @@ const FilterModal = ({ visible, onClose }) => {
   const [selectedChannels, setSelectedChannels] = useState([]);
   const [selectedMutedChannels, setSelectedMutedChannels] = useState([]);
   const [isPowerBadgeHolder, setIsPowerBadgeHolder] = useState(false);
+  const [nftSearchQuery, setNftSearchQuery] = useState('');
+  const [nftSearchResults, setNftSearchResults] = useState([]);
+  const [selectedNFTs, setSelectedNFTs] = useState([]);
+  const [tokenGatedData,setTokenGatedData] = useState();
+  const [tokenGatedFeed, setTokenGatedFeed] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const handleClearAll = useCallback(() => {
     toast('Filters Removd', {
@@ -31,12 +40,16 @@ const FilterModal = ({ visible, onClose }) => {
     setMuteChannels('');
     setSelectedChannels([]);
     setSelectedMutedChannels([]);
+    setSelectedNFTs([]);
+    setTokenGatedFeed([]);
     setFilter({
       lowerFid: 0,
       upperFid: Infinity,
       showChannels: [],
       mutedChannels: [],
       isPowerBadgeHolder: false,
+      nftFilters: [],
+      tokenFeed: [],
     })
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify({
       lowerFid: 0,
@@ -44,6 +57,8 @@ const FilterModal = ({ visible, onClose }) => {
       showChannels: [],
       mutedChannels: [],
       isPowerBadgeHolder: false,
+      nftFilters: [],
+      tokenFeed: [],
     }));
     setFilterChange((prev) => !prev);
   }, []);
@@ -63,7 +78,7 @@ const FilterModal = ({ visible, onClose }) => {
     toast('Filters Applied', {
       icon: '🔥',
     });
-
+  
     const newFilter = {
       ...filter,
       lowerFid: minFID,
@@ -71,13 +86,19 @@ const FilterModal = ({ visible, onClose }) => {
       showChannels: [...selectedChannels],
       mutedChannels: [...selectedMutedChannels],
       isPowerBadgeHolder,
+      nftFilters: selectedNFTs.map(nft => ({
+        id: nft.id,
+        name: nft.name,
+        address: nft.address,
+        holders: nft.holders
+      })),
     };
     updateFilter(newFilter);
     onClose();
-  }, [filter, minFID, maxFID, selectedChannels, selectedMutedChannels, isPowerBadgeHolder, onClose, updateFilter]);
-
+  }, [filter, minFID, maxFID, selectedChannels, selectedMutedChannels, isPowerBadgeHolder, selectedNFTs, onClose, updateFilter]);
   useEffect(() => {
     const fetchFilters = async () => {
+      // setLoading(true);
       const filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS);
       if (filters) {
         const parsedFilters = JSON.parse(filters);
@@ -88,7 +109,10 @@ const FilterModal = ({ visible, onClose }) => {
         setSelectedMutedChannels(parsedFilters.mutedChannels);
         setFilterChange((prev) => !prev);
         setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder);
+        setSelectedNFTs(parsedFilters.nftFilters || []);
+        setTokenGatedFeed(parsedFilters.tokenFeed || []);
       }
+      // setLoading(false);
     };
     fetchFilters();
   }, [setFilter]);
@@ -153,6 +177,9 @@ const FilterModal = ({ visible, onClose }) => {
       setSelectedMutedChannels(newFilter.mutedChannels);
       setFilterChange((prev) => !prev);
       setIsPowerBadgeHolder(newFilter.isPowerBadgeHolder);
+      setSelectedNFTs(newFilter.nftFilters);
+      setTokenGatedFeed(newFilter.tokenFeed);
+      setTokenGatedFeed(newFilter.tokenFeed);
     }
 
     eventEmitter.on('filterChanged', handleApplyFilter)
@@ -161,6 +188,69 @@ const FilterModal = ({ visible, onClose }) => {
       eventEmitter.off('filterChanged', handleApplyFilter)
     }
   }, [])
+
+  useEffect(() => {
+    console.log('tokenGatedData', tokenGatedData?.feed?.casts?.length)
+    if(tokenGatedData?.feed?.casts?.length > 0) {
+      const newTokenFeed = tokenGatedData?.feed?.casts
+      const newFilter = {
+        ...filter,
+        tokenFeed: newTokenFeed
+      }
+      updateFilter(newFilter);
+    }
+  }, [tokenGatedData])
+
+  const debouncedNFTSearch = useCallback(
+    debounce(async (query) => {
+      // This is a placeholder. In a real implementation, you'd call an API to search for NFTs
+      const mockResults = [
+        { id: '1', name: 'Alpaca NFT', address: '0x03ad6cd7410ce01a8b9ed26a080f8f9c1d7cc222' },
+        { id: '2', name: 'Bored Ape Yacht Club', address: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D' },
+        { id: '3', name: 'Nouns', address: '0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03' },
+        { id: '4', name: 'CryptoPunks', address: '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB' },
+        
+        // Add more mock results as needed
+      ].filter(nft => nft.name.toLowerCase().includes(query.toLowerCase()));
+      setNftSearchResults(mockResults);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    if (nftSearchQuery) {
+      debouncedNFTSearch(nftSearchQuery);
+    } else {
+      setNftSearchResults([]);
+    }
+  }, [nftSearchQuery, debouncedNFTSearch]);
+
+  const handleAddNFT = async (nft) => {
+    setLoading(true);
+    if (!selectedNFTs.some(selected => selected.id === nft.id)) {
+      const holders = await fetchNFTHolders(nft);
+      setSelectedNFTs(prevSelectedNFTs => [...(prevSelectedNFTs || []), { ...nft, holders }]);
+    }
+    setNftSearchQuery('');
+    setLoading(false);
+  };
+
+  const handleRemoveNFT = (nftId) => {
+    setTokenGatedData();
+    setSelectedNFTs(selectedNFTs.filter(nft => nft.id !== nftId));
+  };
+
+
+  const fetchNFTHolders = async (nft) => {
+    try {
+      const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`);
+      setTokenGatedData(response.data)
+      return response.data.casts;
+    } catch (error) {
+      console.error('Error fetching NFT holders:', error);
+      return [];
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -223,6 +313,33 @@ const FilterModal = ({ visible, onClose }) => {
                   </TouchableOpacity>
                 </View>
               ))}
+            </View>
+            <Text style={styles.sectionHeader}>NFT Token Gate</Text>
+            
+            <TextInput
+              style={styles.searchInput}
+              value={nftSearchQuery}
+              onChangeText={setNftSearchQuery}
+              placeholder="Search for NFTs"
+            />
+            {nftSearchResults.map((nft) => (
+              <TouchableOpacity key={nft.id} onPress={() => handleAddNFT(nft)} style={styles.channelContainer}>
+                <Text>{nft.name}</Text>
+              </TouchableOpacity>
+            ))}
+              {loading && <ActivityIndicator size="large" color="#0000ff" />}
+            <View style={styles.chipContainer}>
+            <View style={styles.chipContainer}>
+            {selectedNFTs?.map((nft) => (
+              
+              <View key={nft.id} style={styles.chip}>
+                <Text>{nft.name} ({tokenGatedData?.fids ? tokenGatedData?.fids : 'Loading...'} holders)</Text>
+                <TouchableOpacity onPress={() => handleRemoveNFT(nft.id)}>
+                  <FontAwesome name="times" size={16} color="black" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
             </View>
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.clearButton} onPress={handleClearAll}>

@@ -19,7 +19,8 @@ import {
 import { eventEmitter } from '../../utils/event'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LOCAL_STORAGE_KEYS } from '../../constants/Farcaster'
-import { set } from 'lodash'
+import axios from 'axios'
+import { API_URL } from '../../constants'
 
 const ChannelScreen = () => {
   const route = useRoute<any>()
@@ -34,13 +35,36 @@ const ChannelScreen = () => {
     fid,
   )
 
+  // useEffect(() => {
+  //   if (selectedNFTs?.length > 0) {
+  //     const fetchNfts = async () => {
+  //       for (let nft of selectedNFTs) {
+  //         console.log("NFT ", nft)
+          
+  //       }
+  //     }
+
+  //     fetchNfts()
+  //   }
+  // }, [selectedNFTs])
+
+  const fetchNFTHolders = async (nft: any) => {
+    try {
+      const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`)
+      return response.data?.feed?.casts
+    } catch (error) {
+      console.error('Error fetching NFT holders:', error)
+      return []
+    }
+  }
+
   const onEndReached = useCallback(() => {
     if (!isReachingEnd) {
       loadMore()
     }
   }, [isReachingEnd, loadMore])
 
-  const filteredCasts = useMemo(() => {
+  const filteredCasts = useMemo(async() => {
     let filtered = filterFeedBasedOnFID(casts, filter.lowerFid, filter.upperFid)
     if (filter.showChannels.length > 0) {
       filtered = filterCastsBasedOnChannels(filtered, filter.showChannels)
@@ -53,12 +77,21 @@ const ChannelScreen = () => {
         (cast: { author: { power_badge: any } }) => cast.author?.power_badge,
       )
     }
-    // return filtered;
-    if(filter?.tokenFeed?.length > 0) {
-      setFeed([...filter?.tokenFeed,...filtered])
+    if(filter?.nfts?.length > 0) {
+      // const nftFeed = await fetchNFTHolders(filter?.nfts[0])
+      let nftFeed: any[] = []
+      for(let nft of filter?.nfts) {
+        const feed = await fetchNFTHolders(nft)
+        nftFeed = [...nftFeed, ...feed]
+      }
+      setFeed([...nftFeed, ...filtered])
+      return [...nftFeed, ...filtered]
     } else {
       setFeed(filtered)
+      return filtered
     }
+
+    return filtered;
   }, [
     casts,
     isFilterChanged,
@@ -67,7 +100,7 @@ const ChannelScreen = () => {
     filter.showChannels,
     filter.mutedChannels,
     filter.isPowerBadgeHolder,
-    filter?.tokenFeed
+    filter?.nfts
   ])
 
   useEffect(() => {
@@ -89,14 +122,14 @@ const ChannelScreen = () => {
       showChannels: [],
       mutedChannels: [],
       isPowerBadgeHolder: false,
-      tokenFeed: []
+      nfts: []
     }
     setFilter(newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
     eventEmitter.emit('filterChanged', newFilter)
   }
 
-  console.log("FEED ", feed?.length)
+  // console.log("FEED ", feed?.length)
 
   // console.log("FILTER ", JSON.stringify(filter, null, 2))
   return (

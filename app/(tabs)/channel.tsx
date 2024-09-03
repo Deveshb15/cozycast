@@ -28,25 +28,13 @@ const ChannelScreen = () => {
   const { type, parent_url, fid } = route.params
   const [feed, setFeed] = useState<any[]>([])
   const [isFilterChanged, setIsFilterChanged] = useState(false)
+  const [tokenFeed, setTokenFeed] = useState<any[]>([])
 
   const { casts, isLoading, loadMore, isReachingEnd } = useLatestCasts(
     type,
     parent_url,
     fid,
   )
-
-  // useEffect(() => {
-  //   if (selectedNFTs?.length > 0) {
-  //     const fetchNfts = async () => {
-  //       for (let nft of selectedNFTs) {
-  //         console.log("NFT ", nft)
-          
-  //       }
-  //     }
-
-  //     fetchNfts()
-  //   }
-  // }, [selectedNFTs])
 
   const fetchNFTHolders = async (nft: any) => {
     try {
@@ -81,17 +69,23 @@ const ChannelScreen = () => {
       // const nftFeed = await fetchNFTHolders(filter?.nfts[0])
       let nftFeed: any[] = []
       for(let nft of filter?.nfts) {
-        const feed = await fetchNFTHolders(nft)
-        nftFeed = [...nftFeed, ...feed]
+        const feedOfNft = await fetchNFTHolders(nft)
+        setTokenFeed(feedOfNft)
+        nftFeed = [...nftFeed, ...feedOfNft]
       }
       setFeed([...nftFeed, ...filtered])
       return [...nftFeed, ...filtered]
     } else {
-      setFeed(filtered)
-      return filtered
+      if(feed.length > 0 && tokenFeed.length > 0 && filter.nfts.length === 0) {
+        // remove tokenFeed from feed
+        const newFeed = feed.filter((cast) => !tokenFeed.includes(cast))
+        setFeed(newFeed)
+        return newFeed
+      } else {
+        setFeed(filtered)
+        return filtered
+      }
     }
-
-    return filtered;
   }, [
     casts,
     isFilterChanged,

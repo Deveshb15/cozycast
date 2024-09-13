@@ -9,6 +9,7 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -91,6 +92,7 @@ const FilterModal = ({ visible, onClose }) => {
   }
 
   const handleApply = useCallback(() => {
+    console.log("handleApply called");
     toast('Filters Applied', {
       icon: '🔥',
     })
@@ -110,7 +112,11 @@ const FilterModal = ({ visible, onClose }) => {
       })),
       nfts: selectedNFTs,
     }
+    console.log("New filter being applied:", JSON.stringify(newFilter));
     updateFilter(newFilter)
+    // Emit an event to notify other components about the filter change
+    console.log("Emitting filtersUpdated event");
+    eventEmitter.emit('filtersUpdated', newFilter)
     onClose()
   }, [
     filter,
@@ -123,6 +129,7 @@ const FilterModal = ({ visible, onClose }) => {
     onClose,
     updateFilter,
   ])
+
   useEffect(() => {
     const fetchFilters = async () => {
       // setLoading(true);
@@ -136,7 +143,6 @@ const FilterModal = ({ visible, onClose }) => {
         setSelectedMutedChannels(parsedFilters.mutedChannels)
         setFilterChange((prev) => !prev)
         setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder)
-        console.log('parsedFilters 1', parsedFilters.nfts)
         setSelectedNFTs(parsedFilters.nfts || [])
       }
       // setLoading(false);
@@ -191,10 +197,6 @@ const FilterModal = ({ visible, onClose }) => {
   }
 
   useEffect(() => {
-    eventEmitter.emit('filterChanged', filter)
-  }, [filter])
-
-  useEffect(() => {
     const handleApplyFilter = (newFilter) => {
       updateFilter(newFilter)
       AsyncStorage.setItem(
@@ -208,6 +210,8 @@ const FilterModal = ({ visible, onClose }) => {
       setFilterChange((prev) => !prev)
       setIsPowerBadgeHolder(newFilter.isPowerBadgeHolder)
       setSelectedNFTs(newFilter.nfts)
+      // Emit an event to notify other components about the filter change
+      eventEmitter.emit('filtersUpdated', newFilter)
     }
 
     eventEmitter.on('filterChanged', handleApplyFilter)
@@ -215,7 +219,7 @@ const FilterModal = ({ visible, onClose }) => {
     return () => {
       eventEmitter.off('filterChanged', handleApplyFilter)
     }
-  }, [])
+  }, [updateFilter])
 
   const debouncedNFTSearch = useCallback(
     debounce(async (query) => {
@@ -259,6 +263,7 @@ const FilterModal = ({ visible, onClose }) => {
 
   const handleAddNFT = async (nft) => {
     setLoading(true)
+    console.log("Adding NFT to filter:", nft)
     setSelectedNFTs([...selectedNFTs, nft])
     setNftSearchQuery('')
     setLoading(false)

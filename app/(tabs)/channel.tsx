@@ -39,7 +39,9 @@ const ChannelScreen = () => {
   const fetchNFTHolders = async (nft: any) => {
     try {
       const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`)
+      console.log("NFT holders response:", response.data);
       return response.data?.feed?.casts || []
+      
     } catch (error) {
       console.error('Error fetching NFT holders:', error)
       return []

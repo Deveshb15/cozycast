@@ -20,7 +20,6 @@ import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
 import toast from 'react-hot-toast/headless'
 import { eventEmitter } from '../utils/event'
 import axios from 'axios'
-import { API_URL } from '../constants'
 
 const FilterModal = ({ visible, onClose }) => {
   const { filter, setFilter, setFilterChange } = useAppContext()
@@ -38,6 +37,9 @@ const FilterModal = ({ visible, onClose }) => {
   const [selectedNFTs, setSelectedNFTs] = useState([])
   const [tokenGatedData, setTokenGatedData] = useState()
   const [loading, setLoading] = useState(false)
+  const [contractAddress, setContractAddress] = useState('')
+  const [contractMetadata, setContractMetadata] = useState(null)
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
 
   const handleClearAll = useCallback(() => {
     toast('Filters Removd', {
@@ -96,7 +98,7 @@ const FilterModal = ({ visible, onClose }) => {
     toast('Filters Applied', {
       icon: '🔥',
     })
-    console.log("SELECTED NFTs ", selectedNFTs)
+    // console.log("SELECTED NFTs ", selectedNFTs)
     const newFilter = {
       ...filter,
       lowerFid: minFID,
@@ -112,10 +114,10 @@ const FilterModal = ({ visible, onClose }) => {
       })),
       nfts: selectedNFTs,
     }
-    console.log("New filter being applied:", JSON.stringify(newFilter));
+    // console.log("New filter being applied:", JSON.stringify(newFilter));
     updateFilter(newFilter)
     // Emit an event to notify other components about the filter change
-    console.log("Emitting filtersUpdated event");
+    // console.log("Emitting filtersUpdated event");
     eventEmitter.emit('filtersUpdated', newFilter)
     onClose()
   }, [
@@ -274,6 +276,48 @@ const FilterModal = ({ visible, onClose }) => {
     setSelectedNFTs(selectedNFTs.filter((nft) => nft.id !== nftId))
   }
 
+  const fetchContractMetadata = useCallback(async (address) => {
+    // console.log("Fetching metadata for address:", address);
+    setIsLoadingMetadata(true);
+    try {
+      let apiKey = process.env.EXPO_PUBLIC_ALCHEMY_API_KEY
+      const response = await axios.get(`https://eth-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`, {
+        params: { contractAddress: address }
+      });
+      // console.log("Full metadata received:", JSON.stringify(response.data, null, 2));
+      setContractMetadata(response.data);
+    } catch (error) {
+      console.error('Error fetching contract metadata:', error);
+      Alert.alert('Error', 'Failed to fetch contract metadata. Please check the address and try again.');
+    } finally {
+      setIsLoadingMetadata(false);
+    }
+  }, []);
+
+
+  const handleContractAddressChange = useCallback((text) => {
+    // console.log("Contract address changed to:", text);
+    setContractAddress(text);
+    if (text.length === 42 && text.startsWith('0x')) {
+      fetchContractMetadata(text);
+    } else {
+      setContractMetadata(null);
+    }
+  }, [fetchContractMetadata]);
+
+  const handleAddContractNFT = () => {
+    if (contractMetadata) {
+      const newNFT = {
+        id: contractAddress,
+        name: contractMetadata.name || 'Unknown Name',
+        address: contractAddress,
+      };
+      setSelectedNFTs([...selectedNFTs, newNFT]);
+      setContractAddress('');
+      setContractMetadata(null);
+    }
+  };
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
@@ -419,6 +463,32 @@ const FilterModal = ({ visible, onClose }) => {
                 ))}
               </View>
             </View>
+            <Text style={styles.sectionHeader}>NFT Contract Address</Text>
+            <TextInput
+              style={styles.searchInput}
+              value={contractAddress}
+              onChangeText={handleContractAddressChange}
+              placeholder="Enter NFT contract address"
+            />
+            {isLoadingMetadata && <ActivityIndicator size="small" color="#0000ff" />}
+            {contractMetadata && (
+              <View style={styles.contractMetadataContainer}>
+                <View style={styles.contractInfoRow}>
+                  {contractMetadata.openSeaMetadata?.imageUrl && (
+                    <Image
+                      source={{ uri: contractMetadata.openSeaMetadata.imageUrl }}
+                      style={styles.contractImage}
+                    />
+                  )}
+                  <Text style={styles.contractName}>
+                    {contractMetadata.name || 'Unknown'}
+                  </Text>
+                  <TouchableOpacity onPress={handleAddContractNFT} style={styles.addButtonContainer}>
+                    <Text style={styles.addButton}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.clearButton}
@@ -549,6 +619,36 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 10,
     marginRight: 10,
+  },
+  contractMetadataContainer: {
+    marginVertical: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'gray',
+    borderRadius: 10,
+  },
+  contractInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  contractImage: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+  },
+  contractName: {
+    fontSize: 16,
+    flex: 1,
+  },
+  addButtonContainer: {
+    marginLeft: 10,
+  },
+  addButton: {
+    color: '#007bff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 })
 

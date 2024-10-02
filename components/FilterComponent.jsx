@@ -10,6 +10,9 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -40,6 +43,7 @@ const FilterModal = ({ visible, onClose }) => {
   const [contractAddress, setContractAddress] = useState('')
   const [contractMetadata, setContractMetadata] = useState(null)
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
+  const [modalHeight, setModalHeight] = useState('90%')
 
   const handleClearAll = useCallback(() => {
     toast('Filters Removd', {
@@ -318,14 +322,30 @@ const FilterModal = ({ visible, onClose }) => {
     }
   };
 
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setModalHeight('60%')
+    )
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setModalHeight('90%')
+    )
+
+    return () => {
+      keyboardDidShowListener.remove()
+      keyboardDidHideListener.remove()
+    }
+  }, [])
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalContainer}>
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { height: modalHeight }]}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <FontAwesome name="times" size={24} color="black" />
           </TouchableOpacity>
-          <ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled">
             <Text style={styles.header}>Filter</Text>
             <Text style={styles.sectionHeader}>FID</Text>
             <View style={styles.inputRow}>
@@ -468,7 +488,7 @@ const FilterModal = ({ visible, onClose }) => {
               style={styles.searchInput}
               value={contractAddress}
               onChangeText={handleContractAddressChange}
-              placeholder="Enter NFT contract address"
+              placeholder="Paste contract address"
             />
             {isLoadingMetadata && <ActivityIndicator size="small" color="#0000ff" />}
             {contractMetadata && (
@@ -521,10 +541,11 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    height: '90%',
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
+    paddingBottom: 40,
   },
   closeButton: {
     position: 'absolute',

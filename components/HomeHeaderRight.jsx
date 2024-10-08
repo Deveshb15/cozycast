@@ -27,30 +27,47 @@ const HomeHeaderRight = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
-        <Pressable onPress={() => { handleSelect('filter'); router.push(`/(tabs)/channel?type=channel&fid=${fid}`); }}>
-          <Text style={[styles.linkText, { opacity: isSelected === 'filter' ? 1 : 0.4 }]}>CozyCast</Text>
+      <View style={styles.tabsContainer}>
+        <Pressable
+          onPress={() => {
+            handleSelect('filter')
+            router.push(`/(tabs)/channel?type=channel&fid=${fid}`)
+          }}
+        >
+          <Text style={{
+            ...styles.linkText,
+            color: isSelected === 'filter' ? 'black' : 'grey',
+          }}>Following</Text>
         </Pressable>
-      </ScrollView>
-      <Pressable style={styles.filterButton} onPress={() => setFilterVisible(true)}>
-        <Text style={styles.linkText}>Apply Filters</Text>
-        <FontAwesome name="filter" size={18} color="#565555" style={styles.filterIcon} />
-      </Pressable>
-      {/* <Pressable
+        <Pressable
+          onPress={() => {
+            handleSelect('global')
+            router.push(`/(tabs)/channel?type=all`)
+          }}
+        >
+          <Text style={{
+            ...styles.linkText,
+            color: isSelected === 'global' ? 'black' : 'grey',
+          }}>Global Feed</Text>
+        </Pressable>
+      </View>
+
+      <Pressable
         style={styles.filterBtn}
-        onPress={() => setFilterVisible(prev => !prev)}
+        onPress={() => setFilterVisible((prev) => !prev)}
       >
+        <Text>Add Filters</Text>
         <FontAwesome
           name="filter"
           size={18}
           color="#565555"
           style={styles.filterIcon}
         />
-      </Pressable> */}
+      </Pressable>
 
       <FilterList
         visible={isFilterVisible}
-        onClose={() => setFilterVisible(prev => !prev)}
+        onClose={() => setFilterVisible((prev) => !prev)}
       />
       <Notifications />
     </View>
@@ -59,36 +76,32 @@ const HomeHeaderRight = () => {
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: '2.5%',
-    paddingBottom: '2.5%',
-    marginLeft: 'auto',
-    marginRight: 'auto',
+    paddingVertical: '2.5%',
     width: '100%',
-    position: 'relative',
-    display: 'flex',
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingRight: '34%',
-    width:'100%'
+    paddingHorizontal: 15,
   },
-  filterButton: {
-    display:'block',
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
   },
   linkText: {
     fontSize: 18,
     fontWeight: 'normal',
   },
   filterIcon: {
-    paddingTop: 5,
-    paddingLeft: 10,
-    paddingRight: 15,
+    padding: 5,
   },
   filterBtn: {
-    position: 'absolute',
-    right: 10,
-    top: 0,
-    bottom: 0,
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    padding: 5,
   },
 })
 

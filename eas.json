@@ -9,7 +9,8 @@
       "env": {
         "EXPO_PUBLIC_NEYNAR_API_KEY": "9396240E-B23C-4A5E-AA62-412D555E6F13",
         "EXPO_PUBLIC_NEYNAR_CLIENT_ID": "6966d1ac-ca08-4168-86e6-20b296f367ac",
-        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com"
+        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com",
+        "EXPO_PUBLIC_ALCHEMY_API_KEY": "PM6nE4hkjuj2TShqfcWMGSkr10Yke0LK"
       }
     },
     "developmentIos": {
@@ -18,7 +19,8 @@
       "env": {
         "EXPO_PUBLIC_NEYNAR_API_KEY": "9396240E-B23C-4A5E-AA62-412D555E6F13",
         "EXPO_PUBLIC_NEYNAR_CLIENT_ID": "6966d1ac-ca08-4168-86e6-20b296f367ac",
-        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com"
+        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com",
+        "EXPO_PUBLIC_ALCHEMY_API_KEY": "PM6nE4hkjuj2TShqfcWMGSkr10Yke0LK"
       },
       "ios": {
         "simulator": true
@@ -29,14 +31,16 @@
       "env": {
         "EXPO_PUBLIC_NEYNAR_API_KEY": "9396240E-B23C-4A5E-AA62-412D555E6F13",
         "EXPO_PUBLIC_NEYNAR_CLIENT_ID": "6966d1ac-ca08-4168-86e6-20b296f367ac",
-        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com"
+        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com",
+        "EXPO_PUBLIC_ALCHEMY_API_KEY": "PM6nE4hkjuj2TShqfcWMGSkr10Yke0LK"
       }
     },
     "production": {
       "env": {
         "EXPO_PUBLIC_NEYNAR_API_KEY": "9396240E-B23C-4A5E-AA62-412D555E6F13",
         "EXPO_PUBLIC_NEYNAR_CLIENT_ID": "6966d1ac-ca08-4168-86e6-20b296f367ac",
-        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com"
+        "EXPO_PUBLIC_API_URL": "https://api.farcasterkit.com",
+        "EXPO_PUBLIC_ALCHEMY_API_KEY": "PM6nE4hkjuj2TShqfcWMGSkr10Yke0LK"
       }
     }
   },

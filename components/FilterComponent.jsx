@@ -96,7 +96,7 @@ const FilterModal = ({ visible, onClose }) => {
   }
 
   const handleApply = useCallback(() => {
-    console.log("handleApply called");
+    console.log('handleApply called')
     toast('Filters Applied', {
       icon: '🔥',
     })
@@ -267,7 +267,7 @@ const FilterModal = ({ visible, onClose }) => {
 
   const handleAddNFT = async (nft) => {
     setLoading(true)
-    console.log("Adding NFT to filter:", nft)
+    console.log('Adding NFT to filter:', nft)
     setSelectedNFTs([...selectedNFTs, nft])
     setNftSearchQuery('')
     setLoading(false)
@@ -280,32 +280,65 @@ const FilterModal = ({ visible, onClose }) => {
 
   const fetchContractMetadata = useCallback(async (address) => {
     // console.log("Fetching metadata for address:", address);
-    setIsLoadingMetadata(true);
+    setIsLoadingMetadata(true)
     try {
       let apiKey = process.env.EXPO_PUBLIC_ALCHEMY_API_KEY
-      const response = await axios.get(`https://eth-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`, {
-        params: { contractAddress: address }
-      });
-      // console.log("Full metadata received:", JSON.stringify(response.data, null, 2));
-      setContractMetadata(response.data);
+      let response = await axios.get(
+        `https://eth-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`,
+        {
+          params: { contractAddress: address },
+        },
+      )
+      let data = response.data
+
+      if (
+        data?.name === null &&
+        data?.symbol === null &&
+        data?.tokenType === 'NOT_A_CONTRACT'
+      ) {
+        response = await axios.get(
+          `https://base-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`,
+          {
+            params: { contractAddress: address },
+          },
+        )
+        data = response.data
+        console.log('Contract metadata:', response.data)
+        let newData = {
+          chain: 'base',
+          ...data,
+        }
+        setContractMetadata(newData)
+      } else {
+        let newData = {
+          chain: 'eth',
+          ...data,
+        }
+        setContractMetadata(newData)
+      }
     } catch (error) {
-      console.error('Error fetching contract metadata:', error);
-      Alert.alert('Error', 'Failed to fetch contract metadata. Please check the address and try again.');
+      console.error('Error fetching contract metadata:', error)
+      Alert.alert(
+        'Error',
+        'Failed to fetch contract metadata. Please check the address and try again.',
+      )
     } finally {
-      setIsLoadingMetadata(false);
+      setIsLoadingMetadata(false)
     }
-  }, []);
+  }, [])
 
-
-  const handleContractAddressChange = useCallback((text) => {
-    // console.log("Contract address changed to:", text);
-    setContractAddress(text);
-    if (text.length === 42 && text.startsWith('0x')) {
-      fetchContractMetadata(text);
-    } else {
-      setContractMetadata(null);
-    }
-  }, [fetchContractMetadata]);
+  const handleContractAddressChange = useCallback(
+    (text) => {
+      // console.log("Contract address changed to:", text);
+      setContractAddress(text)
+      if (text.length === 42 && text.startsWith('0x')) {
+        fetchContractMetadata(text)
+      } else {
+        setContractMetadata(null)
+      }
+    },
+    [fetchContractMetadata],
+  )
 
   const handleAddContractNFT = () => {
     if (contractMetadata) {
@@ -313,17 +346,17 @@ const FilterModal = ({ visible, onClose }) => {
         id: contractAddress,
         name: contractMetadata.name || 'Unknown Name',
         address: contractAddress,
-      };
-      setSelectedNFTs([...selectedNFTs, newNFT]);
-      setContractAddress('');
-      setContractMetadata(null);
+      }
+      setSelectedNFTs([...selectedNFTs, newNFT])
+      setContractAddress('')
+      setContractMetadata(null)
     }
-  };
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.modalContainer}
       >
         <View style={styles.modalContent}>
@@ -332,7 +365,7 @@ const FilterModal = ({ visible, onClose }) => {
           </TouchableOpacity>
           <ScrollView contentContainerStyle={styles.scrollViewContent}>
             <Text style={styles.header}>Filter</Text>
-            
+
             <View style={styles.section}>
               <Text style={styles.sectionHeader}>FID Range</Text>
               <View style={styles.inputRow}>
@@ -350,7 +383,11 @@ const FilterModal = ({ visible, onClose }) => {
                   <Text>Max</Text>
                   <TextInput
                     style={styles.input}
-                    value={maxFID?.toString() === 'Infinity' ? '' : maxFID?.toString()}
+                    value={
+                      maxFID?.toString() === 'Infinity'
+                        ? ''
+                        : maxFID?.toString()
+                    }
                     onChangeText={handleSetMaxFID}
                     keyboardType="numeric"
                     placeholder="Maximum FID"
@@ -398,7 +435,11 @@ const FilterModal = ({ visible, onClose }) => {
                   <View key={channel} style={styles.chip}>
                     <Text>{channel}</Text>
                     <TouchableOpacity
-                      onPress={() => setSelectedChannels(selectedChannels.filter((c) => c !== channel))}
+                      onPress={() =>
+                        setSelectedChannels(
+                          selectedChannels.filter((c) => c !== channel),
+                        )
+                      }
                     >
                       <FontAwesome name="times" size={16} color="black" />
                     </TouchableOpacity>
@@ -431,7 +472,11 @@ const FilterModal = ({ visible, onClose }) => {
                   <View key={channel} style={styles.chip}>
                     <Text>{channel}</Text>
                     <TouchableOpacity
-                      onPress={() => setSelectedMutedChannels(selectedMutedChannels.filter((c) => c !== channel))}
+                      onPress={() =>
+                        setSelectedMutedChannels(
+                          selectedMutedChannels.filter((c) => c !== channel),
+                        )
+                      }
                     >
                       <FontAwesome name="times" size={16} color="black" />
                     </TouchableOpacity>
@@ -462,7 +507,10 @@ const FilterModal = ({ visible, onClose }) => {
                 {selectedNFTs?.map((nft) => (
                   <View key={nft.id} style={styles.chip}>
                     <Text>{nft.name}</Text>
-                    <TouchableOpacity style={styles.removeButton} onPress={() => handleRemoveNFT(nft.id)}>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveNFT(nft.id)}
+                    >
                       <FontAwesome name="times" size={16} color="black" />
                     </TouchableOpacity>
                   </View>
@@ -476,20 +524,27 @@ const FilterModal = ({ visible, onClose }) => {
                 onChangeText={handleContractAddressChange}
                 placeholder="Enter NFT contract address"
               />
-              {isLoadingMetadata && <ActivityIndicator size="small" color="#0000ff" />}
+              {isLoadingMetadata && (
+                <ActivityIndicator size="small" color="#0000ff" />
+              )}
               {contractMetadata && (
                 <View style={styles.contractMetadataContainer}>
                   <View style={styles.contractInfoRow}>
                     {contractMetadata.openSeaMetadata?.imageUrl && (
                       <Image
-                        source={{ uri: contractMetadata.openSeaMetadata.imageUrl }}
+                        source={{
+                          uri: contractMetadata.openSeaMetadata.imageUrl,
+                        }}
                         style={styles.contractImage}
                       />
                     )}
                     <Text style={styles.contractName}>
                       {contractMetadata.name || 'Unknown'}
                     </Text>
-                    <TouchableOpacity onPress={handleAddContractNFT} style={styles.addButtonContainer}>
+                    <TouchableOpacity
+                      onPress={handleAddContractNFT}
+                      style={styles.addButtonContainer}
+                    >
                       <Text style={styles.addButton}>Add</Text>
                     </TouchableOpacity>
                   </View>
@@ -498,10 +553,16 @@ const FilterModal = ({ visible, onClose }) => {
             </View>
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.clearButton} onPress={handleClearAll}>
+              <TouchableOpacity
+                style={styles.clearButton}
+                onPress={handleClearAll}
+              >
                 <Text style={styles.clearButtonText}>Clear All</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+              <TouchableOpacity
+                style={styles.applyButton}
+                onPress={handleApply}
+              >
                 <Text style={styles.applyButtonText}>Apply</Text>
               </TouchableOpacity>
             </View>

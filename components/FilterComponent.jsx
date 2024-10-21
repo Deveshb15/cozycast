@@ -10,6 +10,8 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -94,7 +96,7 @@ const FilterModal = ({ visible, onClose }) => {
   }
 
   const handleApply = useCallback(() => {
-    console.log("handleApply called");
+    console.log('handleApply called')
     toast('Filters Applied', {
       icon: '🔥',
     })
@@ -265,7 +267,7 @@ const FilterModal = ({ visible, onClose }) => {
 
   const handleAddNFT = async (nft) => {
     setLoading(true)
-    console.log("Adding NFT to filter:", nft)
+    console.log('Adding NFT to filter:', nft)
     setSelectedNFTs([...selectedNFTs, nft])
     setNftSearchQuery('')
     setLoading(false)
@@ -278,32 +280,65 @@ const FilterModal = ({ visible, onClose }) => {
 
   const fetchContractMetadata = useCallback(async (address) => {
     // console.log("Fetching metadata for address:", address);
-    setIsLoadingMetadata(true);
+    setIsLoadingMetadata(true)
     try {
       let apiKey = process.env.EXPO_PUBLIC_ALCHEMY_API_KEY
-      const response = await axios.get(`https://eth-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`, {
-        params: { contractAddress: address }
-      });
-      // console.log("Full metadata received:", JSON.stringify(response.data, null, 2));
-      setContractMetadata(response.data);
+      let response = await axios.get(
+        `https://eth-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`,
+        {
+          params: { contractAddress: address },
+        },
+      )
+      let data = response.data
+
+      if (
+        data?.name === null &&
+        data?.symbol === null &&
+        data?.tokenType === 'NOT_A_CONTRACT'
+      ) {
+        response = await axios.get(
+          `https://base-mainnet.g.alchemy.com/nft/v3/${apiKey}/getContractMetadata`,
+          {
+            params: { contractAddress: address },
+          },
+        )
+        data = response.data
+        console.log('Contract metadata:', response.data)
+        let newData = {
+          chain: 'base',
+          ...data,
+        }
+        setContractMetadata(newData)
+      } else {
+        let newData = {
+          chain: 'eth',
+          ...data,
+        }
+        setContractMetadata(newData)
+      }
     } catch (error) {
-      console.error('Error fetching contract metadata:', error);
-      Alert.alert('Error', 'Failed to fetch contract metadata. Please check the address and try again.');
+      console.error('Error fetching contract metadata:', error)
+      Alert.alert(
+        'Error',
+        'Failed to fetch contract metadata. Please check the address and try again.',
+      )
     } finally {
-      setIsLoadingMetadata(false);
+      setIsLoadingMetadata(false)
     }
-  }, []);
+  }, [])
 
-
-  const handleContractAddressChange = useCallback((text) => {
-    // console.log("Contract address changed to:", text);
-    setContractAddress(text);
-    if (text.length === 42 && text.startsWith('0x')) {
-      fetchContractMetadata(text);
-    } else {
-      setContractMetadata(null);
-    }
-  }, [fetchContractMetadata]);
+  const handleContractAddressChange = useCallback(
+    (text) => {
+      // console.log("Contract address changed to:", text);
+      setContractAddress(text)
+      if (text.length === 42 && text.startsWith('0x')) {
+        fetchContractMetadata(text)
+      } else {
+        setContractMetadata(null)
+      }
+    },
+    [fetchContractMetadata],
+  )
 
   const handleAddContractNFT = () => {
     if (contractMetadata) {
@@ -311,203 +346,229 @@ const FilterModal = ({ visible, onClose }) => {
         id: contractAddress,
         name: contractMetadata.name || 'Unknown Name',
         address: contractAddress,
-      };
-      setSelectedNFTs([...selectedNFTs, newNFT]);
-      setContractAddress('');
-      setContractMetadata(null);
+      }
+      setSelectedNFTs([...selectedNFTs, newNFT])
+      setContractAddress('')
+      setContractMetadata(null)
     }
-  };
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.modalContainer}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.modalContainer}
+      >
         <View style={styles.modalContent}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
             <FontAwesome name="times" size={24} color="black" />
           </TouchableOpacity>
-          <ScrollView>
+          <ScrollView contentContainerStyle={styles.scrollViewContent}>
             <Text style={styles.header}>Filter</Text>
-            <Text style={styles.sectionHeader}>FID</Text>
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <Text>Min</Text>
-                <TextInput
-                  style={styles.input}
-                  value={minFID?.toString()}
-                  onChangeText={(text) => setMinFID(Number(text))}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.inputContainer}>
-                <Text>Max</Text>
-                <TextInput
-                  style={styles.input}
-                  value={
-                    maxFID?.toString() === 'Infinity' ? '' : maxFID?.toString()
-                  }
-                  onChangeText={handleSetMaxFID}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-            <Text style={styles.sectionHeader}>Power Badge Holder</Text>
-            {/* Checkbox */}
-            <TouchableOpacity
-              onPress={() => setIsPowerBadgeHolder(!isPowerBadgeHolder)}
-              style={styles.channelContainer}
-            >
-              <Text>{isPowerBadgeHolder ? '✅' : '❌'}</Text>
-              <Text style={{ marginLeft: 4 }}>Power Badge Holder</Text>
-            </TouchableOpacity>
-            <Text style={styles.sectionHeader}>Search Channels</Text>
-            <TextInput
-              style={styles.searchInput}
-              value={searchChannels}
-              onChangeText={setSearchChannels}
-              placeholder="Search channels"
-            />
-            {fetchedChannels?.slice(0, 5).map((channel) => (
-              <TouchableOpacity
-                key={channel.id}
-                onPress={() => handleAddChannel(channel)}
-                style={styles.channelContainer}
-              >
-                <Image
-                  source={{ uri: channel.image_url }}
-                  style={styles.channelImage}
-                />
-                <Text>{channel.name}</Text>
-              </TouchableOpacity>
-            ))}
-            <View style={styles.chipContainer}>
-              {selectedChannels.map((channel) => (
-                <View key={channel} style={styles.chip}>
-                  <Text>{channel}</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedChannels(
-                        selectedChannels.filter((c) => c !== channel),
-                      )
-                    }
-                  >
-                    <FontAwesome name="times" size={16} color="black" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.sectionHeader}>Mute Channels</Text>
-            <TextInput
-              style={styles.searchInput}
-              value={muteChannels}
-              onChangeText={setMuteChannels}
-              placeholder="Mute channels"
-            />
-            {fetchedMutedChannels.map((channel) => (
-              <TouchableOpacity
-                key={channel.id}
-                onPress={() => handleAddMuteChannel(channel)}
-                style={styles.channelContainer}
-              >
-                <Image
-                  source={{ uri: channel.image_url }}
-                  style={styles.channelImage}
-                />
-                <Text>{channel.name}</Text>
-              </TouchableOpacity>
-            ))}
-            <View style={styles.chipContainer}>
-              {selectedMutedChannels?.slice(0, 5).map((channel) => (
-                <View key={channel} style={styles.chip}>
-                  <Text>{channel}</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedMutedChannels(
-                        selectedMutedChannels.filter((c) => c !== channel),
-                      )
-                    }
-                  >
-                    <FontAwesome name="times" size={16} color="black" />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.sectionHeader}>NFT Token Gate</Text>
 
-            <TextInput
-              style={styles.searchInput}
-              value={nftSearchQuery}
-              onChangeText={setNftSearchQuery}
-              placeholder="Search for NFTs"
-            />
-            {nftSearchResults.map((nft) => (
+            <View style={styles.section}>
+              <Text style={styles.sectionHeader}>FID Range</Text>
+              <View style={styles.inputRow}>
+                <View style={styles.inputContainer}>
+                  <Text>Min</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={minFID?.toString()}
+                    onChangeText={(text) => setMinFID(Number(text))}
+                    keyboardType="numeric"
+                    placeholder="Minimum FID"
+                  />
+                </View>
+                <View style={styles.inputContainer}>
+                  <Text>Max</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={
+                      maxFID?.toString() === 'Infinity'
+                        ? ''
+                        : maxFID?.toString()
+                    }
+                    onChangeText={handleSetMaxFID}
+                    keyboardType="numeric"
+                    placeholder="Maximum FID"
+                  />
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionHeader}>User Type</Text>
               <TouchableOpacity
-                key={nft.id}
-                onPress={() => handleAddNFT(nft)}
-                style={styles.channelContainer}
+                onPress={() => setIsPowerBadgeHolder(!isPowerBadgeHolder)}
+                style={styles.checkboxContainer}
               >
-                <Text>{nft.name}</Text>
+                <Text style={styles.checkboxText}>
+                  {isPowerBadgeHolder ? '✅' : '☐'} Power Badge Holder
+                </Text>
               </TouchableOpacity>
-            ))}
-            {loading && <ActivityIndicator size="large" color="#0000ff" />}
-            <View style={styles.chipContainer}>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionHeader}>Channel Filters</Text>
+              <Text style={styles.subSectionHeader}>Show Channels</Text>
+              <TextInput
+                style={styles.input}
+                value={searchChannels}
+                onChangeText={setSearchChannels}
+                placeholder="Search channels to show"
+              />
+              {fetchedChannels?.slice(0, 5).map((channel) => (
+                <TouchableOpacity
+                  key={channel.id}
+                  onPress={() => handleAddChannel(channel)}
+                  style={styles.channelContainer}
+                >
+                  <Image
+                    source={{ uri: channel.image_url }}
+                    style={styles.channelImage}
+                  />
+                  <Text>{channel.name}</Text>
+                </TouchableOpacity>
+              ))}
               <View style={styles.chipContainer}>
-                {selectedNFTs?.map((nft) => (
-                  <View key={nft.id} style={styles.chip}>
-                    <Text>
-                      {nft.name} 
-                    </Text>
-                    <TouchableOpacity style={{marginLeft: 10}} onPress={() => handleRemoveNFT(nft.id)}>
+                {selectedChannels.map((channel) => (
+                  <View key={channel} style={styles.chip}>
+                    <Text>{channel}</Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setSelectedChannels(
+                          selectedChannels.filter((c) => c !== channel),
+                        )
+                      }
+                    >
+                      <FontAwesome name="times" size={16} color="black" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={styles.subSectionHeader}>Mute Channels</Text>
+              <TextInput
+                style={styles.input}
+                value={muteChannels}
+                onChangeText={setMuteChannels}
+                placeholder="Search channels to mute"
+              />
+              {fetchedMutedChannels.map((channel) => (
+                <TouchableOpacity
+                  key={channel.id}
+                  onPress={() => handleAddMuteChannel(channel)}
+                  style={styles.channelContainer}
+                >
+                  <Image
+                    source={{ uri: channel.image_url }}
+                    style={styles.channelImage}
+                  />
+                  <Text>{channel.name}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={styles.chipContainer}>
+                {selectedMutedChannels?.slice(0, 5).map((channel) => (
+                  <View key={channel} style={styles.chip}>
+                    <Text>{channel}</Text>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setSelectedMutedChannels(
+                          selectedMutedChannels.filter((c) => c !== channel),
+                        )
+                      }
+                    >
                       <FontAwesome name="times" size={16} color="black" />
                     </TouchableOpacity>
                   </View>
                 ))}
               </View>
             </View>
-            <Text style={styles.sectionHeader}>NFT Contract Address</Text>
-            <TextInput
-              style={styles.searchInput}
-              value={contractAddress}
-              onChangeText={handleContractAddressChange}
-              placeholder="Enter NFT contract address"
-            />
-            {isLoadingMetadata && <ActivityIndicator size="small" color="#0000ff" />}
-            {contractMetadata && (
-              <View style={styles.contractMetadataContainer}>
-                <View style={styles.contractInfoRow}>
-                  {contractMetadata.openSeaMetadata?.imageUrl && (
-                    <Image
-                      source={{ uri: contractMetadata.openSeaMetadata.imageUrl }}
-                      style={styles.contractImage}
-                    />
-                  )}
-                  <Text style={styles.contractName}>
-                    {contractMetadata.name || 'Unknown'}
-                  </Text>
-                  <TouchableOpacity onPress={handleAddContractNFT} style={styles.addButtonContainer}>
-                    <Text style={styles.addButton}>Add</Text>
-                  </TouchableOpacity>
-                </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionHeader}>NFT Token Gate</Text>
+              <TextInput
+                style={styles.input}
+                value={nftSearchQuery}
+                onChangeText={setNftSearchQuery}
+                placeholder="Search for NFTs"
+              />
+              {nftSearchResults.map((nft) => (
+                <TouchableOpacity
+                  key={nft.id}
+                  onPress={() => handleAddNFT(nft)}
+                  style={styles.channelContainer}
+                >
+                  <Text>{nft.name}</Text>
+                </TouchableOpacity>
+              ))}
+              {loading && <ActivityIndicator size="large" color="#0000ff" />}
+              <View style={styles.chipContainer}>
+                {selectedNFTs?.map((nft) => (
+                  <View key={nft.id} style={styles.chip}>
+                    <Text>{nft.name}</Text>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveNFT(nft.id)}
+                    >
+                      <FontAwesome name="times" size={16} color="black" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
-            )}
+
+              <Text style={styles.subSectionHeader}>NFT Contract Address</Text>
+              <TextInput
+                style={styles.input}
+                value={contractAddress}
+                onChangeText={handleContractAddressChange}
+                placeholder="Enter NFT contract address"
+              />
+              {isLoadingMetadata && (
+                <ActivityIndicator size="small" color="#0000ff" />
+              )}
+              {contractMetadata && (
+                <View style={styles.contractMetadataContainer}>
+                  <View style={styles.contractInfoRow}>
+                    {contractMetadata.openSeaMetadata?.imageUrl && (
+                      <Image
+                        source={{
+                          uri: contractMetadata.openSeaMetadata.imageUrl,
+                        }}
+                        style={styles.contractImage}
+                      />
+                    )}
+                    <Text style={styles.contractName}>
+                      {contractMetadata.name || 'Unknown'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleAddContractNFT}
+                      style={styles.addButtonContainer}
+                    >
+                      <Text style={styles.addButton}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+
             <View style={styles.buttonRow}>
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={handleClearAll}
               >
-                <Text style={{ ...styles.buttonText, color: '#000' }}>
-                  Clear All
-                </Text>
+                <Text style={styles.clearButtonText}>Clear All</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.applyButton}
                 onPress={handleApply}
               >
-                <Text style={styles.buttonText}>Apply</Text>
+                <Text style={styles.applyButtonText}>Apply</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
@@ -516,15 +577,20 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
     width: '100%',
     height: '90%',
     backgroundColor: 'white',
-    borderRadius: 10,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
+    paddingBottom: 40, // Add extra padding at the bottom
+  },
+  scrollViewContent: {
+    flexGrow: 1,
+    paddingBottom: 20, // Add padding to the bottom of the ScrollView content
   },
   closeButton: {
     position: 'absolute',
@@ -538,10 +604,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
+  section: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 20,
+  },
   sectionHeader: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginVertical: 10,
+    marginBottom: 10,
+    color: '#333',
+  },
+  subSectionHeader: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 10,
+    marginBottom: 5,
+    color: '#555',
   },
   inputRow: {
     flexDirection: 'row',
@@ -553,10 +633,11 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 5,
+    borderColor: '#ccc',
+    borderRadius: 8,
     padding: 10,
-    marginTop: 5,
+    marginBottom: 10,
+    backgroundColor: '#f9f9f9',
   },
   searchInput: {
     borderWidth: 1,
@@ -568,17 +649,16 @@ const styles = StyleSheet.create({
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginVertical: 10,
+    marginVertical: 5,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: 'black',
-    borderWidth: 1,
-    borderRadius: 15,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 20,
     paddingVertical: 5,
-    paddingHorizontal: 15,
-    margin: 5,
+    paddingHorizontal: 10,
+    margin: 3,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -586,33 +666,37 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   clearButton: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#f0f0f0',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 8,
     flex: 1,
     marginRight: 10,
     alignItems: 'center',
   },
+  clearButtonText: {
+    color: '#333',
+    fontWeight: 'bold',
+  },
   applyButton: {
     backgroundColor: '#007bff',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 8,
     flex: 1,
     alignItems: 'center',
   },
-  buttonText: {
+  applyButtonText: {
     color: '#fff',
     fontWeight: 'bold',
   },
   channelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 10,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   channelImage: {
     width: 24,
@@ -624,8 +708,9 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'gray',
-    borderRadius: 10,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    backgroundColor: '#fff',
   },
   contractInfoRow: {
     flexDirection: 'row',
@@ -649,6 +734,18 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 5,
+  },
+  checkboxText: {
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  removeButton: {
+    marginLeft: 5,
   },
 })
 

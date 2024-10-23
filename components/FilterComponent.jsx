@@ -399,8 +399,7 @@ const FilterModal = ({ visible, onClose }) => {
             <FontAwesome name="times" size={24} color="black" />
           </TouchableOpacity>
           <ScrollView contentContainerStyle={styles.scrollViewContent}>
-            <Text style={styles.header}>Filter</Text>
-
+            <Text style={styles.header}>Filter</Text>        
             <View style={styles.section}>
               <Text style={styles.sectionHeader}>FID Range</Text>
               <View style={styles.inputRow}>
@@ -585,15 +584,15 @@ const FilterModal = ({ visible, onClose }) => {
                   </View>
                 </View>
               )}
-              
-              {/* New toggle for Include Recasts */}
-              <View style={styles.toggleContainer}>
+                  <View style={styles.toggleContainer}>
+              <View style={styles.toggleLabelContainer}>
                 <Text style={styles.toggleLabel}>Include Recasts</Text>
                 <Switch
                   value={includeRecasts}
                   onValueChange={toggleIncludeRecasts}
                 />
               </View>
+            </View>
             </View>
 
             <View style={styles.buttonRow}>
@@ -792,15 +791,23 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   toggleContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 15,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  toggleLabelContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 10,
+    marginLeft: 10,
+    // justifyContent: 'space-between',
   },
   toggleLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#555',
+    color: '#333',
+    marginRight: 10, // Add some space between the text and the switch
   },
 })
 

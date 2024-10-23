@@ -55,7 +55,9 @@ const ChannelScreen = () => {
   }, [isReachingEnd, loadMore])
 
   const applyFilters = useCallback(async () => {
-    let filtered = filterFeedBasedOnFID(casts, filter.lowerFid, filter.upperFid)
+    let lower = filter?.lowerFid || 0
+    let upper = filter?.upperFid || Infinity
+    let filtered = filterFeedBasedOnFID(casts, lower, upper)
     if (filter.showChannels.length > 0) {
       filtered = filterCastsBasedOnChannels(filtered, filter.showChannels)
     }
@@ -71,7 +73,6 @@ const ChannelScreen = () => {
     if(filter.includeRecasts === false) {
       filtered = filtered.filter((cast: { reaction: { recasts: any[] } }) => cast?.reaction?.recasts?.length === 0)
     }
-
     if(filter?.nfts?.length > 0) {
       let nftFeed: any[] = []
       for(let nft of filter.nfts) {
@@ -94,8 +95,10 @@ const ChannelScreen = () => {
   }, [casts, filter, tokenFeed, fetchNFTHolders])
 
   useEffect(() => {
-    applyFilters()
-  }, [filter, isFilterChanged])
+    if(casts) {
+      applyFilters()
+    }
+  }, [filter, isFilterChanged, casts])
 
   useEffect(() => {
     const handleFilterChange = () => {
@@ -119,7 +122,7 @@ const ChannelScreen = () => {
       mutedChannels: [],
       isPowerBadgeHolder: false,
       nfts: [],
-      includeRecasts: false
+      includeRecasts: true
     }
     setFilter(newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))

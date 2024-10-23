@@ -107,8 +107,8 @@ const FilterModal = ({ visible, onClose }) => {
     // console.log("SELECTED NFTs ", selectedNFTs)
     const newFilter = {
       ...filter,
-      lowerFid: minFID,
-      upperFid: maxFID,
+      lowerFid: minFID || 0,
+      upperFid: maxFID || Infinity,
       showChannels: [...selectedChannels],
       mutedChannels: [...selectedMutedChannels],
       isPowerBadgeHolder,
@@ -147,8 +147,8 @@ const FilterModal = ({ visible, onClose }) => {
       if (filters) {
         const parsedFilters = JSON.parse(filters)
         setFilter(parsedFilters)
-        setMinFID(parsedFilters.lowerFid)
-        setMaxFID(parsedFilters.upperFid)
+        setMinFID(parsedFilters.lowerFid || 0)
+        setMaxFID(parsedFilters.upperFid || Infinity)
         setSelectedChannels(parsedFilters.showChannels)
         setSelectedMutedChannels(parsedFilters.mutedChannels)
         setFilterChange((prev) => !prev)

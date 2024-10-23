@@ -64,7 +64,8 @@ function RootLayoutNav() {
     mutedChannels: [],
     showChannels: [],
     isPowerBadgeHolder: false,
-    nfts: []
+    nfts: [],
+    includeRecasts: true
   })
 
   const colorScheme = useColorScheme()

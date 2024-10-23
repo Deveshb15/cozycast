@@ -69,5 +69,6 @@ export const useLatestCasts = (type = 'home', parentUrl = '', fid = 616) => {
       setSize(size + 1)
     }
   }, [isReachingEnd, setSize, size])
+
   return { casts, isLoading, isReachingEnd, loadMore }
 }

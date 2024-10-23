@@ -12,6 +12,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from 'react-native'
 import FontAwesome from '@expo/vector-icons/FontAwesome'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -42,6 +43,7 @@ const FilterModal = ({ visible, onClose }) => {
   const [contractAddress, setContractAddress] = useState('')
   const [contractMetadata, setContractMetadata] = useState(null)
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
+  const [includeRecasts, setIncludeRecasts] = useState(true)
 
   const handleClearAll = useCallback(() => {
     toast('Filters Removd', {
@@ -62,6 +64,7 @@ const FilterModal = ({ visible, onClose }) => {
       isPowerBadgeHolder: false,
       nftFilters: [],
       nfts: [],
+      includeRecasts: true
     })
     AsyncStorage.setItem(
       LOCAL_STORAGE_KEYS.FILTERS,
@@ -73,6 +76,7 @@ const FilterModal = ({ visible, onClose }) => {
         isPowerBadgeHolder: false,
         nftFilters: [],
         nfts: [],
+        includeRecasts: true
       }),
     )
     setFilterChange((prev) => !prev)
@@ -115,6 +119,7 @@ const FilterModal = ({ visible, onClose }) => {
         holders: nft.holders,
       })),
       nfts: selectedNFTs,
+      includeRecasts,
     }
     // console.log("New filter being applied:", JSON.stringify(newFilter));
     updateFilter(newFilter)
@@ -132,6 +137,7 @@ const FilterModal = ({ visible, onClose }) => {
     selectedNFTs,
     onClose,
     updateFilter,
+    includeRecasts,
   ])
 
   useEffect(() => {
@@ -148,6 +154,7 @@ const FilterModal = ({ visible, onClose }) => {
         setFilterChange((prev) => !prev)
         setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder)
         setSelectedNFTs(parsedFilters.nfts || [])
+        setIncludeRecasts(parsedFilters.includeRecasts || true)
       }
       // setLoading(false);
     }
@@ -353,6 +360,11 @@ const FilterModal = ({ visible, onClose }) => {
     }
   }
 
+  const toggleIncludeRecasts = () => {
+    setIncludeRecasts(prev => !prev)
+    console.log('Include Recasts:', !includeRecasts)
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <KeyboardAvoidingView
@@ -550,6 +562,15 @@ const FilterModal = ({ visible, onClose }) => {
                   </View>
                 </View>
               )}
+              
+              {/* New toggle for Include Recasts */}
+              <View style={styles.toggleContainer}>
+                <Text style={styles.toggleLabel}>Include Recasts</Text>
+                <Switch
+                  value={includeRecasts}
+                  onValueChange={toggleIncludeRecasts}
+                />
+              </View>
             </View>
 
             <View style={styles.buttonRow}>
@@ -746,6 +767,17 @@ const styles = StyleSheet.create({
   },
   removeButton: {
     marginLeft: 5,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#555',
   },
 })
 

@@ -39,7 +39,7 @@ const ChannelScreen = () => {
   const fetchNFTHolders = async (nft: any) => {
     try {
       const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`)
-      console.log("NFT holders response:", response.data);
+      // console.log("NFT holders response:", response.data);
       return response.data?.feed?.casts || []
       
     } catch (error) {
@@ -67,7 +67,11 @@ const ChannelScreen = () => {
         (cast: { author: { power_badge: any } }) => cast.author?.power_badge,
       )
     }
-    
+
+    if(filter.includeRecasts === false) {
+      filtered = filtered.filter((cast: { reaction: { recasts: any[] } }) => cast?.reaction?.recasts?.length === 0)
+    }
+
     if(filter?.nfts?.length > 0) {
       let nftFeed: any[] = []
       for(let nft of filter.nfts) {
@@ -114,7 +118,8 @@ const ChannelScreen = () => {
       showChannels: [],
       mutedChannels: [],
       isPowerBadgeHolder: false,
-      nfts: []
+      nfts: [],
+      includeRecasts: false
     }
     setFilter(newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))

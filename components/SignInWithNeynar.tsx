@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import {
   Button,
+  Platform,
   StyleSheet,
 } from 'react-native'
 import { Text, View } from 'react-native'
@@ -44,6 +45,9 @@ export default function SignInWithNeynar() {
         LOCAL_STORAGE_KEYS.FARCASTER_USER,
         JSON.stringify(farcasterUser),
       )
+      if (Platform.OS === 'web') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.FARCASTER_USER, JSON.stringify(farcasterUser))
+      }
       setFarcasterUser(farcasterUser)
       router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 404104}` as any)
     }

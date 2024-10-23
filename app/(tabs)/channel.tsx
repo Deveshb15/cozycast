@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Text,
   TouchableOpacity,
+  Platform,
 } from 'react-native'
 import { useRoute } from '@react-navigation/native'
 import Cast from '../../components/Cast'
@@ -126,6 +127,9 @@ const ChannelScreen = () => {
     }
     setFilter(newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+    if (Platform.OS === 'web') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+    }
     eventEmitter.emit('filterChanged', newFilter)
   }
 

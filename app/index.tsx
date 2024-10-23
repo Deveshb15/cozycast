@@ -50,6 +50,9 @@ export default function IndexScreen() {
       }
 
       let filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
+      if (Platform.OS === 'web') {
+        filters = localStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
+      }
       if (filters) {
         const parsedFilters = JSON.parse(filters)
         setFilter(parsedFilters)

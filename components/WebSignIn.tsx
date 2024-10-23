@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import {
+  Platform,
   StyleSheet,
 } from 'react-native'
 import { Text, View } from 'react-native'
@@ -44,6 +45,9 @@ export default function WebSignIn() {
         LOCAL_STORAGE_KEYS.FARCASTER_USER,
         JSON.stringify(farcasterUser),
       )
+      if (Platform.OS === 'web') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.FARCASTER_USER, JSON.stringify(farcasterUser))
+      }
     //   setFarcasterUser(farcasterUser)
       router.push('/(tabs)')
       setFid(Number(user.fid))

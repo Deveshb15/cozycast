@@ -56,6 +56,7 @@ const FilterModal = ({ visible, onClose }) => {
     setSelectedChannels([])
     setSelectedMutedChannels([])
     setSelectedNFTs([])
+    setIncludeRecasts(true)
     setFilter({
       lowerFid: 0,
       upperFid: Infinity,
@@ -79,6 +80,18 @@ const FilterModal = ({ visible, onClose }) => {
         includeRecasts: true
       }),
     )
+    if (Platform.OS === 'web') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify({
+        lowerFid: 0,
+        upperFid: Infinity,
+        showChannels: [],
+        mutedChannels: [],
+        isPowerBadgeHolder: false,
+        nftFilters: [],
+        nfts: [],
+        includeRecasts: true
+      }))
+    }
     setFilterChange((prev) => !prev)
   }, [])
 
@@ -89,6 +102,9 @@ const FilterModal = ({ visible, onClose }) => {
         LOCAL_STORAGE_KEYS.FILTERS,
         JSON.stringify(newFilter),
       )
+      if (Platform.OS === 'web') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+      }
       setFilterChange((prev) => !prev)
     },
     [setFilter],
@@ -143,7 +159,10 @@ const FilterModal = ({ visible, onClose }) => {
   useEffect(() => {
     const fetchFilters = async () => {
       // setLoading(true);
-      const filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
+      let filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
+      if (Platform.OS === 'web') {
+        filters = localStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
+      }
       if (filters) {
         const parsedFilters = JSON.parse(filters)
         setFilter(parsedFilters)
@@ -154,7 +173,7 @@ const FilterModal = ({ visible, onClose }) => {
         setFilterChange((prev) => !prev)
         setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder)
         setSelectedNFTs(parsedFilters.nfts || [])
-        setIncludeRecasts(parsedFilters.includeRecasts || true)
+        setIncludeRecasts(parsedFilters.includeRecasts)
       }
       // setLoading(false);
     }
@@ -214,13 +233,17 @@ const FilterModal = ({ visible, onClose }) => {
         LOCAL_STORAGE_KEYS.FILTERS,
         JSON.stringify(newFilter),
       )
-      setMaxFID(newFilter.upperFid)
-      setMinFID(newFilter.lowerFid)
+      if (Platform.OS === 'web') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+      }
+      setMaxFID(newFilter.upperFid || Infinity)
+      setMinFID(newFilter.lowerFid || 0)
       setSelectedChannels(newFilter.showChannels)
       setSelectedMutedChannels(newFilter.mutedChannels)
       setFilterChange((prev) => !prev)
       setIsPowerBadgeHolder(newFilter.isPowerBadgeHolder)
       setSelectedNFTs(newFilter.nfts)
+      setIncludeRecasts(newFilter.includeRecasts)
       // Emit an event to notify other components about the filter change
       eventEmitter.emit('filtersUpdated', newFilter)
     }

@@ -80,7 +80,6 @@ const styles = StyleSheet.create({
     marginTop: 0,
     height: 'auto',
     minHeight: '10%',
-    right: '5%',
   },
   neynarSignInBtn: {
     marginRight: '20%',

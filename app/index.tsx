@@ -89,7 +89,7 @@ export default function IndexScreen() {
           A beautiful yet simple Farcaster client
         </Text>
         <View>
-        <View style={{width:'50%', marginTop:40, marginLeft:25}}>
+        <View className="web-sign-in-container" style={{ backgroundColor: 'white'}}>
           <WebSignIn />
         </View>
         </View>
@@ -118,6 +118,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     color: 'black',
+    marginBottom: 40,
   },
   homepageHeader: {
     width: '100%',

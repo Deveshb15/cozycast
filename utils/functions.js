@@ -1,21 +1,15 @@
-export const filterFeedBasedOnFID = (feed, lower_limit_feed=0, upper_limit_feed=Infinity) => {
-    if (upper_limit_feed === 0) {
-        return feed
-    }
+export const filterFeedBasedOnFID = (feed, lower_limit_feed = 0, upper_limit_feed = Infinity) => {
     if (!feed || feed.length === 0) {
         return [];
     }
 
-    let upper = upper_limit_feed
-    if(upper === null || upper === undefined) {
-        upper = Infinity
-    }
+    const lower = lower_limit_feed ?? 0;
+    const upper = upper_limit_feed ?? Infinity;
 
-    let lower = lower_limit_feed
-    if (lower === null || lower === undefined) {
-        lower = 0
-    }
-    return feed.filter((item) => item?.author?.fid >= lower && item?.author?.fid <= upper);
+    return feed.filter((item) => {
+        const fid = item?.author?.fid;
+        return fid !== undefined && fid >= lower && fid <= upper;
+    });
 }
 
 const getChannelIdFromUrl = (channelUrl = "") => {
@@ -28,9 +22,23 @@ const getChannelIdFromUrl = (channelUrl = "") => {
 }
 
 export const filterCastsBasedOnChannels = (casts, channels) => {
-    return casts.filter((cast) => channels.includes(getChannelIdFromUrl(cast?.parent_url)))
+    if (!casts || casts.length === 0 || !channels || channels.length === 0) {
+        return [];
+    }
+
+    return casts.filter((cast) => {
+        const channelId = getChannelIdFromUrl(cast?.parent_url);
+        return channelId && channels.includes(channelId);
+    });
 }
 
 export const filterCastsToMute = (casts, mutedChannels) => {
-    return casts.filter((cast) => !mutedChannels.includes(getChannelIdFromUrl(cast?.parent_url)))
+    if (!casts || casts.length === 0 || !mutedChannels || mutedChannels.length === 0) {
+        return casts;
+    }
+
+    return casts.filter((cast) => {
+        const channelId = getChannelIdFromUrl(cast?.parent_url);
+        return channelId && !mutedChannels.includes(channelId);
+    });
 }

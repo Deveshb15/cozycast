@@ -94,8 +94,10 @@ const ChannelScreen = () => {
   }, [casts, filter, tokenFeed, fetchNFTHolders])
 
   useEffect(() => {
-    applyFilters()
-  }, [filter, isFilterChanged])
+    if(casts?.length > 0) {
+      applyFilters()
+    }
+  }, [filter, isFilterChanged, casts])
 
   useEffect(() => {
     const handleFilterChange = () => {
@@ -119,7 +121,7 @@ const ChannelScreen = () => {
       mutedChannels: [],
       isPowerBadgeHolder: false,
       nfts: [],
-      includeRecasts: false
+      includeRecasts: true
     }
     setFilter(newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))

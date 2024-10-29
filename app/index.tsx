@@ -56,7 +56,7 @@ export default function IndexScreen() {
   const router = useRouter()
   useEffect(() => {
     if (farcasterUser) {
-      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 404104}` as any)
+      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
     }
   }, [farcasterUser])
 
@@ -65,7 +65,7 @@ export default function IndexScreen() {
       let user = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FARCASTER_USER)
       if (user) {
         const parsedUser : FarcasterUser = JSON.parse(user)
-        setFid(parsedUser?.fid || 404104)
+        setFid(parsedUser?.fid || 4256)
         setUser(parsedUser)
         router.push(`/(tabs)/channel?type=channel&fid=${fid}` as any)
       }

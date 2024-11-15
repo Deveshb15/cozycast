@@ -37,17 +37,15 @@ const ChannelScreen = () => {
     fid,
   )
 
-  const fetchNFTHolders = async (nft: any) => {
+  const fetchNFTHolders = useCallback(async (nft: any) => {
     try {
       const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`)
-      // console.log("NFT holders response:", response.data);
-      return response.data?.feed?.casts || []
-      
+      return response.data
     } catch (error) {
       console.error('Error fetching NFT holders:', error)
-      return []
+      return { feed: { casts: [] } }
     }
-  }
+  }, [])
 
   const onEndReached = useCallback(() => {
     if (!isReachingEnd) {
@@ -55,69 +53,92 @@ const ChannelScreen = () => {
     }
   }, [isReachingEnd, loadMore])
 
-  const applyFilters = useCallback((castsToFilter: any[]) => {
+  const applyFilters = useCallback(async (castsToFilter: any[]) => {
     if (!castsToFilter?.length) return []
     
     console.log("FILTERS ", JSON.stringify(filter, null, 2))
     let filtered = [...castsToFilter]
+    console.log("FILTERS 1 ", filtered.length)
 
-    console.log('FILTERED 0 len', filtered.length)
-    // Apply FID filter
-    filtered = filtered.filter(cast => {
-      const fid = cast?.author?.fid
-      const lowerFid = filter.lowerFid || 0
-      const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
-      return fid >= lowerFid && fid <= upperFid
-    })
+    const applyBasicFilters = (casts: any[]) => {
+      let result = [...casts]
+      
+      if (filter.lowerFid || filter.upperFid) {
+        result = result.filter(cast => {
+          const fid = cast?.author?.fid
+          const lowerFid = filter.lowerFid || 0
+          const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
+          return fid >= lowerFid && fid <= upperFid
+        })
+      }
+      console.log("FILTERS 2 ", result.length)
 
-    console.log('FILTERED 1 len', filtered.length)
-
-    // Apply channel filters - only if channels are selected
-    if (filter.showChannels?.length > 0) {
-      filtered = filtered.filter(cast => {
-        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-        return channelId && filter.showChannels.some((c: string) => c.toLowerCase() === channelId)
-      })
+      if (filter.showChannels?.length > 0) {
+        result = result.filter(cast => {
+          const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+          return channelId && filter.showChannels.some((c : string) => c.toLowerCase() === channelId)
+        })
+      }
+      console.log("FILTERS 3 ", result.length)
+      if (filter.mutedChannels?.length > 0) {
+        result = result.filter(cast => {
+          const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+          return !filter.mutedChannels.some((c : string) => c.toLowerCase() === channelId)
+        })
+      }
+      console.log("FILTERS 4 ", result.length)
+      if (filter.isPowerBadgeHolder) {
+        result = result.filter(cast => cast.author?.power_badge)
+      }
+      console.log("FILTERS 5 ", result.length)
+      if (!filter.includeRecasts) {
+        result = result.filter(cast => !cast?.reactions?.recasts_count)
+      }
+      console.log("FILTERS 6 ", result.length)
+      return result
     }
 
-    console.log('FILTERED 2 len', filtered.length)
+    filtered = applyBasicFilters(filtered)
+    console.log("FILTERS 7 ", filtered.length)
+    if (filter.nfts?.length > 0) {
+      const nftResults = await Promise.all(
+        filter.nfts.map((nft: any) => fetchNFTHolders(nft))
+      )
+      
+      
+      const nftFeed = nftResults
+        .flatMap(result => result?.feed?.casts || [])
+        .filter(Boolean)
 
-    // Apply muted channels
-    if (filter.mutedChannels?.length > 0) {
-      filtered = filtered.filter(cast => {
-        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-        return !filter.mutedChannels.some((c: string) => c.toLowerCase() === channelId)
-      })
+      return [
+        ...nftFeed,
+        ...filtered.filter(cast => 
+          !nftFeed.some(nftCast => nftCast.hash === cast.hash)
+        )
+      ]
     }
-
-    console.log('FILTERED 3 len', filtered.length)
-
-    // Apply power badge filter
-    if (filter.isPowerBadgeHolder) {
-      filtered = filtered.filter(cast => cast.author?.power_badge)
-    }
-
-    console.log('FILTERED 4 len', filtered.length)
-
-    // Apply recast filter
-    if (!filter.includeRecasts) {
-      filtered = filtered.filter(cast => !cast?.reaction?.recasts?.length)
-    }
-
-    console.log('FILTERED 5 len', filtered.length)
 
     return filtered
-  }, [filter])
+  }, [filter, fetchNFTHolders])
 
   useEffect(() => {
-    if (casts?.length > 0) {
-      console.log("Applying filters to casts:", casts.length);
-      console.log("Current filter:", filter);
-      const filteredCasts = applyFilters(casts);
-      console.log("Filtered casts:", filteredCasts.length);
-      setFeed(filteredCasts);
+    let mounted = true
+
+    const processFeeds = async () => {
+      if (!casts?.length) return
+      
+      const filteredCasts = await applyFilters(casts)
+      if (mounted) {
+        setFeed(filteredCasts)
+      }
     }
-  }, [casts, filter, applyFilters, isFilterChanged]);
+
+    processFeeds()
+
+    return () => {
+      mounted = false
+    }
+  }, [casts, applyFilters])
 
   useEffect(() => {
     const handleFilterChange = (newFilter : Filter) => {

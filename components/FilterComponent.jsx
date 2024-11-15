@@ -148,14 +148,6 @@ const FilterModal = ({ visible, onClose }) => {
     }
   }, [muteChannels, debouncedMuteSearch])
 
-  const handleAddNFT = async (nft) => {
-    setLoading(true)
-    console.log('Adding NFT to filter:', nft)
-    setSelectedNFTs([...selectedNFTs, nft])
-    setNftSearchQuery('')
-    setLoading(false)
-  }
-
   const handleRemoveNFT = (nftId) => {
     setTokenGatedData()
     setSelectedNFTs(selectedNFTs.filter((nft) => nft.id !== nftId))
@@ -374,36 +366,7 @@ const FilterModal = ({ visible, onClose }) => {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionHeader}>NFT Token Gate</Text>
-              <TextInput
-                style={styles.input}
-                value={nftSearchQuery}
-                onChangeText={setNftSearchQuery}
-                placeholder="Search for NFTs"
-              />
-              {nftSearchResults.map((nft) => (
-                <TouchableOpacity
-                  key={nft.id}
-                  onPress={() => handleAddNFT(nft)}
-                  style={styles.channelContainer}
-                >
-                  <Text>{nft.name}</Text>
-                </TouchableOpacity>
-              ))}
               {loading && <ActivityIndicator size="large" color="#0000ff" />}
-              <View style={styles.chipContainer}>
-                {selectedNFTs?.map((nft) => (
-                  <View key={nft.id} style={styles.chip}>
-                    <Text>{nft.name}</Text>
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveNFT(nft.id)}
-                    >
-                      <FontAwesome name="times" size={16} color="black" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
 
               <Text style={styles.subSectionHeader}>NFT Contract Address</Text>
               <TextInput
@@ -436,6 +399,19 @@ const FilterModal = ({ visible, onClose }) => {
                       <Text style={styles.addButton}>Add</Text>
                     </TouchableOpacity>
                   </View>
+                  <View style={styles.chipContainer}>
+                {selectedNFTs?.map((nft) => (
+                  <View key={nft.id} style={styles.chip}>
+                    <Text>{nft.name}</Text>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => handleRemoveNFT(nft.id)}
+                    >
+                      <FontAwesome name="times" size={16} color="black" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
                 </View>
               )}
               

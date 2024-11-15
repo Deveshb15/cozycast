@@ -28,9 +28,7 @@ const ChannelScreen = () => {
   const { filter, setFilter } = useAppContext()
   const { type, parent_url, fid } = route.params
   const [feed, setFeed] = useState<any[]>([])
-  const [isFilterChanged, setIsFilterChanged] = useState(false)
-  const [tokenFeed, setTokenFeed] = useState<any[]>([])
-
+  
   const { casts, isLoading, loadMore, isReachingEnd } = useLatestCasts(
     type,
     parent_url,
@@ -47,79 +45,71 @@ const ChannelScreen = () => {
     }
   }, [])
 
-  const onEndReached = useCallback(() => {
-    if (!isReachingEnd) {
-      loadMore()
-    }
-  }, [isReachingEnd, loadMore])
-
+  // Memoize the filtered casts to prevent unnecessary recalculations
   const applyFilters = useCallback(async (castsToFilter: any[]) => {
     if (!castsToFilter?.length) return []
     
-    console.log("FILTERS ", JSON.stringify(filter, null, 2))
-    let filtered = [...castsToFilter]
-    console.log("FILTERS 1 ", filtered.length)
+    // Create a Set of existing cast hashes for deduplication
+    const existingHashes = new Set(feed.map(cast => cast.hash))
+    
+    // Only process casts that we haven't seen before
+    const newCasts = castsToFilter.filter(cast => !existingHashes.has(cast.hash))
+    if (!newCasts.length) return feed
 
-    const applyBasicFilters = (casts: any[]) => {
-      let result = [...casts]
-      
-      if (filter.lowerFid || filter.upperFid) {
-        result = result.filter(cast => {
-          const fid = cast?.author?.fid
-          const lowerFid = filter.lowerFid || 0
-          const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
-          return fid >= lowerFid && fid <= upperFid
-        })
-      }
-      console.log("FILTERS 2 ", result.length)
+    let filtered = [...newCasts]
 
-      if (filter.showChannels?.length > 0) {
-        result = result.filter(cast => {
-          const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-          return channelId && filter.showChannels.some((c : string) => c.toLowerCase() === channelId)
-        })
-      }
-      console.log("FILTERS 3 ", result.length)
-      if (filter.mutedChannels?.length > 0) {
-        result = result.filter(cast => {
-          const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-          return !filter.mutedChannels.some((c : string) => c.toLowerCase() === channelId)
-        })
-      }
-      console.log("FILTERS 4 ", result.length)
-      if (filter.isPowerBadgeHolder) {
-        result = result.filter(cast => cast.author?.power_badge)
-      }
-      console.log("FILTERS 5 ", result.length)
-      if (!filter.includeRecasts) {
-        result = result.filter(cast => !cast?.reactions?.recasts_count)
-      }
-      console.log("FILTERS 6 ", result.length)
-      return result
+    // Apply basic filters
+    filtered = filtered.filter(cast => {
+      const fid = cast?.author?.fid
+      const lowerFid = filter.lowerFid || 0
+      const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
+      return fid >= lowerFid && fid <= upperFid
+    })
+
+    if (filter.showChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return channelId && filter.showChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
     }
 
-    filtered = applyBasicFilters(filtered)
-    console.log("FILTERS 7 ", filtered.length)
+    if (filter.mutedChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return !filter.mutedChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
+    }
+
+    if (filter.isPowerBadgeHolder) {
+      filtered = filtered.filter(cast => cast.author?.power_badge)
+    }
+
+    if (!filter.includeRecasts) {
+      filtered = filtered.filter(cast => !cast?.reactions?.recasts_count)
+    }
+
+    // Handle NFT filters
     if (filter.nfts?.length > 0) {
       const nftResults = await Promise.all(
         filter.nfts.map((nft: any) => fetchNFTHolders(nft))
       )
       
-      
       const nftFeed = nftResults
         .flatMap(result => result?.feed?.casts || [])
         .filter(Boolean)
+        .filter(cast => !existingHashes.has(cast.hash))
 
-      return [
-        ...nftFeed,
-        ...filtered.filter(cast => 
-          !nftFeed.some(nftCast => nftCast.hash === cast.hash)
-        )
-      ]
+      return [...feed, ...nftFeed, ...filtered]
     }
 
-    return filtered
-  }, [filter, fetchNFTHolders])
+    return [...feed, ...filtered]
+  }, [feed, filter, fetchNFTHolders])
+
+  const onEndReached = useCallback(() => {
+    if (!isReachingEnd) {
+      loadMore()
+    }
+  }, [isReachingEnd, loadMore])
 
   useEffect(() => {
     let mounted = true
@@ -128,7 +118,7 @@ const ChannelScreen = () => {
       if (!casts?.length) return
       
       const filteredCasts = await applyFilters(casts)
-      if (mounted) {
+      if (mounted && filteredCasts.length !== feed.length) {
         setFeed(filteredCasts)
       }
     }
@@ -140,10 +130,14 @@ const ChannelScreen = () => {
     }
   }, [casts, applyFilters])
 
+  // Reset feed when filter changes
   useEffect(() => {
-    const handleFilterChange = (newFilter : Filter) => {
+    setFeed([])
+  }, [filter])
+
+  useEffect(() => {
+    const handleFilterChange = (newFilter: Filter) => {
       setFilter(newFilter);
-      setIsFilterChanged(prev => !prev);
     }
 
     eventEmitter.on('filtersUpdated', handleFilterChange);
@@ -171,12 +165,14 @@ const ChannelScreen = () => {
     eventEmitter.emit('filterChanged', newFilter)
   }
 
+  console.log("FEED ", feed.length)
+
   return (
     <View style={styles.container}>
       {feed && feed.length > 0 && !isLoading ? (
         <FlashList
           contentContainerStyle={styles.flashList}
-          data={feed.reverse()}
+          data={[...feed].reverse()}
           renderItem={({ item, index }) => <Cast key={index} cast={item} />}
           keyExtractor={(_, index) => index.toString()}
           onEndReached={onEndReached}

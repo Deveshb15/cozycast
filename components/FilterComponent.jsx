@@ -67,9 +67,9 @@ const FilterModal = ({ visible, onClose }) => {
       mutedChannels: selectedMutedChannels,
       isPowerBadgeHolder: isPowerBadgeHolder,
       nfts: selectedNFTs,
-      includeRecasts: includeRecasts
+      includeRecasts: includeRecasts,
     }
-    
+
     updateFilter(newFilter)
     onClose()
   }, [
@@ -79,7 +79,7 @@ const FilterModal = ({ visible, onClose }) => {
     selectedMutedChannels,
     isPowerBadgeHolder,
     selectedNFTs,
-    includeRecasts
+    includeRecasts,
   ])
 
   const handleClearAll = useCallback(() => {
@@ -91,7 +91,7 @@ const FilterModal = ({ visible, onClose }) => {
       isPowerBadgeHolder: false,
       nftFilters: [],
       nfts: [],
-      includeRecasts: true
+      includeRecasts: true,
     }
     setLocalFilter(defaultFilter)
     updateFilter(defaultFilter)
@@ -229,7 +229,7 @@ const FilterModal = ({ visible, onClose }) => {
   }
 
   const toggleIncludeRecasts = () => {
-    setIncludeRecasts(prev => !prev)
+    setIncludeRecasts((prev) => !prev)
     console.log('Include Recasts:', !includeRecasts)
   }
 
@@ -378,6 +378,20 @@ const FilterModal = ({ visible, onClose }) => {
               {isLoadingMetadata && (
                 <ActivityIndicator size="small" color="#0000ff" />
               )}
+              <View style={styles.chipContainer}>
+              {selectedNFTs?.map((nft) => (
+                      <View key={nft.id} style={styles.chip}>
+                        <Text>{nft.name}</Text>
+                        <TouchableOpacity
+                          style={styles.removeButton}
+                          onPress={() => handleRemoveNFT(nft.id)}
+                        >
+                          <FontAwesome name="times" size={16} color="black" />
+                        </TouchableOpacity>
+                      </View>
+                ))}
+                
+              </View>
               {contractMetadata && (
                 <View style={styles.contractMetadataContainer}>
                   <View style={styles.contractInfoRow}>
@@ -399,22 +413,9 @@ const FilterModal = ({ visible, onClose }) => {
                       <Text style={styles.addButton}>Add</Text>
                     </TouchableOpacity>
                   </View>
-                  <View style={styles.chipContainer}>
-                {selectedNFTs?.map((nft) => (
-                  <View key={nft.id} style={styles.chip}>
-                    <Text>{nft.name}</Text>
-                    <TouchableOpacity
-                      style={styles.removeButton}
-                      onPress={() => handleRemoveNFT(nft.id)}
-                    >
-                      <FontAwesome name="times" size={16} color="black" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
                 </View>
               )}
-              
+
               {/* New toggle for Include Recasts */}
               <View style={styles.toggleContainer}>
                 <Text style={styles.toggleLabel}>Include Recasts</Text>

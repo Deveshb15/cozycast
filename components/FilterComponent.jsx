@@ -23,9 +23,11 @@ import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
 import toast from 'react-hot-toast/headless'
 import { eventEmitter } from '../utils/event'
 import axios from 'axios'
+import { useFilter } from '../hooks/useFilter'
 
 const FilterModal = ({ visible, onClose }) => {
-  const { filter, setFilter, setFilterChange } = useAppContext()
+  const { filter, updateFilter } = useFilter()
+  const [localFilter, setLocalFilter] = useState(filter)
   const [minFID, setMinFID] = useState(0)
   const [maxFID, setMaxFID] = useState(Infinity)
   const [searchChannels, setSearchChannels] = useState('')
@@ -45,18 +47,43 @@ const FilterModal = ({ visible, onClose }) => {
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(false)
   const [includeRecasts, setIncludeRecasts] = useState(true)
 
+  useEffect(() => {
+    if (filter) {
+      setMinFID(filter.lowerFid || 0)
+      setMaxFID(filter.upperFid === Infinity ? '' : filter.upperFid)
+      setSelectedChannels(filter.showChannels || [])
+      setSelectedMutedChannels(filter.mutedChannels || [])
+      setIsPowerBadgeHolder(filter.isPowerBadgeHolder || false)
+      setSelectedNFTs(filter.nfts || [])
+      setIncludeRecasts(filter.includeRecasts)
+    }
+  }, [filter])
+
+  const handleApply = useCallback(() => {
+    const newFilter = {
+      lowerFid: minFID,
+      upperFid: maxFID === '' ? Infinity : maxFID,
+      showChannels: selectedChannels,
+      mutedChannels: selectedMutedChannels,
+      isPowerBadgeHolder: isPowerBadgeHolder,
+      nfts: selectedNFTs,
+      includeRecasts: includeRecasts
+    }
+    
+    updateFilter(newFilter)
+    onClose()
+  }, [
+    minFID,
+    maxFID,
+    selectedChannels,
+    selectedMutedChannels,
+    isPowerBadgeHolder,
+    selectedNFTs,
+    includeRecasts
+  ])
+
   const handleClearAll = useCallback(() => {
-    toast('Filters Removd', {
-      icon: '❌',
-    })
-    setMinFID(0)
-    setMaxFID(Infinity)
-    setSearchChannels('')
-    setMuteChannels('')
-    setSelectedChannels([])
-    setSelectedMutedChannels([])
-    setSelectedNFTs([])
-    setFilter({
+    const defaultFilter = {
       lowerFid: 0,
       upperFid: Infinity,
       showChannels: [],
@@ -65,101 +92,27 @@ const FilterModal = ({ visible, onClose }) => {
       nftFilters: [],
       nfts: [],
       includeRecasts: true
-    })
-    AsyncStorage.setItem(
-      LOCAL_STORAGE_KEYS.FILTERS,
-      JSON.stringify({
-        lowerFid: 0,
-        upperFid: Infinity,
-        showChannels: [],
-        mutedChannels: [],
-        isPowerBadgeHolder: false,
-        nftFilters: [],
-        nfts: [],
-        includeRecasts: true
-      }),
-    )
-    setFilterChange((prev) => !prev)
-  }, [])
-
-  const updateFilter = useCallback(
-    (newFilter) => {
-      setFilter(newFilter)
-      AsyncStorage.setItem(
-        LOCAL_STORAGE_KEYS.FILTERS,
-        JSON.stringify(newFilter),
-      )
-      setFilterChange((prev) => !prev)
-    },
-    [setFilter],
-  )
+    }
+    setLocalFilter(defaultFilter)
+    updateFilter(defaultFilter)
+  }, [updateFilter])
 
   const handleSetMaxFID = (text) => {
     const numericValue = parseFloat(text)
     setMaxFID(!isNaN(numericValue) ? numericValue : '')
   }
 
-  const handleApply = useCallback(() => {
-    console.log('handleApply called')
-    toast('Filters Applied', {
-      icon: '🔥',
-    })
-    // console.log("SELECTED NFTs ", selectedNFTs)
-    const newFilter = {
-      ...filter,
-      lowerFid: minFID,
-      upperFid: maxFID,
-      showChannels: [...selectedChannels],
-      mutedChannels: [...selectedMutedChannels],
-      isPowerBadgeHolder,
-      nftFilters: selectedNFTs.map((nft) => ({
-        id: nft.id,
-        name: nft.name,
-        address: nft.address,
-        holders: nft.holders,
-      })),
-      nfts: selectedNFTs,
-      includeRecasts,
-    }
-    // console.log("New filter being applied:", JSON.stringify(newFilter));
-    updateFilter(newFilter)
-    // Emit an event to notify other components about the filter change
-    // console.log("Emitting filtersUpdated event");
-    eventEmitter.emit('filtersUpdated', newFilter)
-    onClose()
-  }, [
-    filter,
-    minFID,
-    maxFID,
-    selectedChannels,
-    selectedMutedChannels,
-    isPowerBadgeHolder,
-    selectedNFTs,
-    onClose,
-    updateFilter,
-    includeRecasts,
-  ])
+  const handleAddChannel = (channel) => {
+    setSearchChannels('')
+    setSelectedChannels([...selectedChannels, channel.id])
+    setFetchedChannels([])
+  }
 
-  useEffect(() => {
-    const fetchFilters = async () => {
-      // setLoading(true);
-      const filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
-      if (filters) {
-        const parsedFilters = JSON.parse(filters)
-        setFilter(parsedFilters)
-        setMinFID(parsedFilters.lowerFid)
-        setMaxFID(parsedFilters.upperFid)
-        setSelectedChannels(parsedFilters.showChannels)
-        setSelectedMutedChannels(parsedFilters.mutedChannels)
-        setFilterChange((prev) => !prev)
-        setIsPowerBadgeHolder(parsedFilters.isPowerBadgeHolder)
-        setSelectedNFTs(parsedFilters.nfts || [])
-        setIncludeRecasts(parsedFilters.includeRecasts || true)
-      }
-      // setLoading(false);
-    }
-    fetchFilters()
-  }, [setFilter])
+  const handleAddMuteChannel = (channel) => {
+    setMuteChannels('')
+    setSelectedMutedChannels([...selectedMutedChannels, channel.id])
+    setFetchedMutedChannels([])
+  }
 
   const debouncedSearch = useCallback(
     debounce(async (text) => {
@@ -194,83 +147,6 @@ const FilterModal = ({ visible, onClose }) => {
       debouncedMuteSearch.cancel()
     }
   }, [muteChannels, debouncedMuteSearch])
-
-  const handleAddChannel = (channel) => {
-    setSearchChannels('')
-    setSelectedChannels([...selectedChannels, channel.id])
-    setFetchedChannels([])
-  }
-
-  const handleAddMuteChannel = (channel) => {
-    setMuteChannels('')
-    setSelectedMutedChannels([...selectedMutedChannels, channel.id])
-    setFetchedMutedChannels([])
-  }
-
-  useEffect(() => {
-    const handleApplyFilter = (newFilter) => {
-      updateFilter(newFilter)
-      AsyncStorage.setItem(
-        LOCAL_STORAGE_KEYS.FILTERS,
-        JSON.stringify(newFilter),
-      )
-      setMaxFID(newFilter.upperFid)
-      setMinFID(newFilter.lowerFid)
-      setSelectedChannels(newFilter.showChannels)
-      setSelectedMutedChannels(newFilter.mutedChannels)
-      setFilterChange((prev) => !prev)
-      setIsPowerBadgeHolder(newFilter.isPowerBadgeHolder)
-      setSelectedNFTs(newFilter.nfts)
-      // Emit an event to notify other components about the filter change
-      eventEmitter.emit('filtersUpdated', newFilter)
-    }
-
-    eventEmitter.on('filterChanged', handleApplyFilter)
-
-    return () => {
-      eventEmitter.off('filterChanged', handleApplyFilter)
-    }
-  }, [updateFilter])
-
-  const debouncedNFTSearch = useCallback(
-    debounce(async (query) => {
-      // This is a placeholder. In a real implementation, you'd call an API to search for NFTs
-      const mockResults = [
-        {
-          id: '1',
-          name: 'Alpaca NFT',
-          address: '0x03ad6cd7410ce01a8b9ed26a080f8f9c1d7cc222',
-        },
-        {
-          id: '2',
-          name: 'Bored Ape Yacht Club',
-          address: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
-        },
-        {
-          id: '3',
-          name: 'Nouns',
-          address: '0x9C8fF314C9Bc7F6e59A9d9225Fb22946427eDC03',
-        },
-        {
-          id: '4',
-          name: 'CryptoPunks',
-          address: '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB',
-        },
-
-        // Add more mock results as needed
-      ].filter((nft) => nft.name.toLowerCase().includes(query.toLowerCase()))
-      setNftSearchResults(mockResults)
-    }, 300),
-    [],
-  )
-
-  useEffect(() => {
-    if (nftSearchQuery) {
-      debouncedNFTSearch(nftSearchQuery)
-    } else {
-      setNftSearchResults([])
-    }
-  }, [nftSearchQuery, debouncedNFTSearch])
 
   const handleAddNFT = async (nft) => {
     setLoading(true)

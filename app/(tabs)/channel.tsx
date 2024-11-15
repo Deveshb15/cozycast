@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LOCAL_STORAGE_KEYS } from '../../constants/Farcaster'
 import axios from 'axios'
 import { API_URL } from '../../constants'
+import { Filter } from '../../types/filter'
 
 const ChannelScreen = () => {
   const route = useRoute<any>()
@@ -54,64 +55,84 @@ const ChannelScreen = () => {
     }
   }, [isReachingEnd, loadMore])
 
-  const applyFilters = useCallback(async () => {
-    let filtered = filterFeedBasedOnFID(casts, filter.lowerFid, filter.upperFid)
-    if (filter.showChannels.length > 0) {
-      filtered = filterCastsBasedOnChannels(filtered, filter.showChannels)
+  const applyFilters = useCallback((castsToFilter: any[]) => {
+    if (!castsToFilter?.length) return []
+    
+    console.log("FILTERS ", JSON.stringify(filter, null, 2))
+    let filtered = [...castsToFilter]
+
+    console.log('FILTERED 0 len', filtered.length)
+    // Apply FID filter
+    filtered = filtered.filter(cast => {
+      const fid = cast?.author?.fid
+      const lowerFid = filter.lowerFid || 0
+      const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
+      return fid >= lowerFid && fid <= upperFid
+    })
+
+    console.log('FILTERED 1 len', filtered.length)
+
+    // Apply channel filters - only if channels are selected
+    if (filter.showChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return channelId && filter.showChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
     }
-    if (filter.mutedChannels.length > 0) {
-      filtered = filterCastsToMute(filtered, filter.mutedChannels)
+
+    console.log('FILTERED 2 len', filtered.length)
+
+    // Apply muted channels
+    if (filter.mutedChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return !filter.mutedChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
     }
+
+    console.log('FILTERED 3 len', filtered.length)
+
+    // Apply power badge filter
     if (filter.isPowerBadgeHolder) {
-      filtered = filtered.filter(
-        (cast: { author: { power_badge: any } }) => cast.author?.power_badge,
-      )
+      filtered = filtered.filter(cast => cast.author?.power_badge)
     }
 
-    if(filter.includeRecasts === false) {
-      filtered = filtered.filter((cast: { reaction: { recasts: any[] } }) => cast?.reaction?.recasts?.length === 0)
+    console.log('FILTERED 4 len', filtered.length)
+
+    // Apply recast filter
+    if (!filter.includeRecasts) {
+      filtered = filtered.filter(cast => !cast?.reaction?.recasts?.length)
     }
 
-    if(filter?.nfts?.length > 0) {
-      let nftFeed: any[] = []
-      for(let nft of filter.nfts) {
-        const feedOfNft = await fetchNFTHolders(nft)
-        nftFeed = [...nftFeed, ...feedOfNft]
-      }
-      setTokenFeed(nftFeed)
-      // Ensure NFT holder casts are at the beginning of the feed
-      setFeed([...nftFeed, ...filtered.filter((cast: { id: any }) => !nftFeed.some(nftCast => nftCast.id === cast.id))])
-    } else {
-      if(tokenFeed.length > 0 && filter.nfts.length === 0) {
-        // Remove tokenFeed from feed when NFT filter is cleared
-        const newFeed = filtered.filter((cast: any) => !tokenFeed.some(tokenCast => tokenCast.id === cast.id))
-        setFeed(newFeed)
-      } else {
-        setFeed(filtered)
-      }
-      setTokenFeed([])
-    }
-  }, [casts, filter, tokenFeed, fetchNFTHolders])
+    console.log('FILTERED 5 len', filtered.length)
+
+    return filtered
+  }, [filter])
 
   useEffect(() => {
-    if(casts?.length > 0) {
-      applyFilters()
+    if (casts?.length > 0) {
+      console.log("Applying filters to casts:", casts.length);
+      console.log("Current filter:", filter);
+      const filteredCasts = applyFilters(casts);
+      console.log("Filtered casts:", filteredCasts.length);
+      setFeed(filteredCasts);
     }
-  }, [filter, isFilterChanged, casts])
+  }, [casts, filter, applyFilters, isFilterChanged]);
 
   useEffect(() => {
-    const handleFilterChange = () => {
-      setIsFilterChanged((prev) => !prev)
+    const handleFilterChange = (newFilter : Filter) => {
+      setFilter(newFilter);
+      setIsFilterChanged(prev => !prev);
     }
 
-    eventEmitter.on('filterChanged', handleFilterChange)
-    eventEmitter.on('filtersUpdated', handleFilterChange)
+    eventEmitter.on('filtersUpdated', handleFilterChange);
+    eventEmitter.on('filterChanged', handleFilterChange);
 
     return () => {
-      eventEmitter.off('filterChanged', handleFilterChange)
-      eventEmitter.off('filtersUpdated', handleFilterChange)
+      eventEmitter.off('filtersUpdated', handleFilterChange);
+      eventEmitter.off('filterChanged', handleFilterChange);
     }
-  }, [])
+  }, [setFilter]);
 
   const handleApply = () => {
     let newFilter = {
@@ -124,6 +145,7 @@ const ChannelScreen = () => {
       includeRecasts: true
     }
     setFilter(newFilter)
+    console.log('NEW FILTER', newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
     eventEmitter.emit('filterChanged', newFilter)
   }

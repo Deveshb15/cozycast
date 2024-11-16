@@ -55,7 +55,7 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const [fid, setFid] = useState(404104)
+  const [fid, setFid] = useState(4256)
   const [user, setUser] = useState<FarcasterUser | null>(null)
   const [filterChange, setFilterChange] = useState(false)
   const [filter, setFilter] = useState({

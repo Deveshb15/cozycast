@@ -22,32 +22,89 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LOCAL_STORAGE_KEYS } from '../../constants/Farcaster'
 import axios from 'axios'
 import { API_URL } from '../../constants'
+import { Filter } from '../../types/filter'
 
 const ChannelScreen = () => {
   const route = useRoute<any>()
   const { filter, setFilter } = useAppContext()
   const { type, parent_url, fid } = route.params
   const [feed, setFeed] = useState<any[]>([])
-  const [isFilterChanged, setIsFilterChanged] = useState(false)
-  const [tokenFeed, setTokenFeed] = useState<any[]>([])
-
+  
   const { casts, isLoading, loadMore, isReachingEnd } = useLatestCasts(
     type,
     parent_url,
     fid,
   )
 
-  const fetchNFTHolders = async (nft: any) => {
+  const fetchNFTHolders = useCallback(async (nft: any) => {
     try {
       const response = await axios.get(`${API_URL}/nft-holders/${nft.address}`)
-      // console.log("NFT holders response:", response.data);
-      return response.data?.feed?.casts || []
-      
+      return response.data
     } catch (error) {
       console.error('Error fetching NFT holders:', error)
-      return []
+      return { feed: { casts: [] } }
     }
-  }
+  }, [])
+
+  // Memoize the filtered casts to prevent unnecessary recalculations
+  const applyFilters = useCallback(async (castsToFilter: any[]) => {
+    if (!castsToFilter?.length) return []
+    
+    // Create a Set of existing cast hashes for deduplication
+    const existingHashes = new Set(feed.map(cast => cast.hash))
+    
+    // Only process casts that we haven't seen before
+    const newCasts = castsToFilter.filter(cast => !existingHashes.has(cast.hash))
+    if (!newCasts.length) return feed
+
+    let filtered = [...newCasts]
+
+    // Apply basic filters
+    filtered = filtered.filter(cast => {
+      const fid = cast?.author?.fid
+      const lowerFid = filter.lowerFid || 0
+      const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
+      return fid >= lowerFid && fid <= upperFid
+    })
+
+    if (filter.showChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return channelId && filter.showChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
+    }
+
+    if (filter.mutedChannels?.length > 0) {
+      filtered = filtered.filter(cast => {
+        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
+        return !filter.mutedChannels.some((c: string) => c.toLowerCase() === channelId)
+      })
+    }
+
+    if (filter.isPowerBadgeHolder) {
+      filtered = filtered.filter(cast => cast.author?.power_badge)
+    }
+
+    if (!filter.includeRecasts) {
+      filtered = filtered.filter(cast => !cast?.reactions?.recasts_count)
+    }
+
+    // Handle NFT filters
+    if (filter.nfts?.length > 0) {
+      const nftResults = await Promise.all(
+        filter.nfts.map((nft: any) => fetchNFTHolders(nft))
+      )
+      
+      const nftFeed = nftResults
+        .flatMap(result => result?.feed?.casts || [])
+        .filter(Boolean)
+        .filter(cast => !existingHashes.has(cast.hash))
+
+      return [...feed, ...nftFeed, ...filtered]
+    }
+
+    return [...feed, ...filtered]
+  }, [feed, filter, fetchNFTHolders])
 
   const onEndReached = useCallback(() => {
     if (!isReachingEnd) {
@@ -55,65 +112,43 @@ const ChannelScreen = () => {
     }
   }, [isReachingEnd, loadMore])
 
-  const applyFilters = useCallback(async () => {
-    let lower = filter?.lowerFid || 0
-    let upper = filter?.upperFid || Infinity
-    let filtered = filterFeedBasedOnFID(casts, lower, upper)
-    if (filter.showChannels.length > 0) {
-      filtered = filterCastsBasedOnChannels(filtered, filter.showChannels)
-    }
-    if (filter.mutedChannels.length > 0) {
-      filtered = filterCastsToMute(filtered, filter.mutedChannels)
-    }
-    if (filter.isPowerBadgeHolder) {
-      filtered = filtered.filter(
-        (cast: { author: { power_badge: any } }) => cast.author?.power_badge,
-      )
-    }
-
-    if(filter.includeRecasts === false) {
-      filtered = filtered.filter((cast: { reaction: { recasts: any[] } }) => cast?.reaction?.recasts?.length === 0)
-    }
-    if(filter?.nfts?.length > 0) {
-      let nftFeed: any[] = []
-      for(let nft of filter.nfts) {
-        const feedOfNft = await fetchNFTHolders(nft)
-        nftFeed = [...nftFeed, ...feedOfNft]
-      }
-      setTokenFeed(nftFeed)
-      // Ensure NFT holder casts are at the beginning of the feed
-      setFeed([...nftFeed, ...filtered.filter((cast: { id: any }) => !nftFeed.some(nftCast => nftCast.id === cast.id))])
-    } else {
-      if(tokenFeed.length > 0 && filter.nfts.length === 0) {
-        // Remove tokenFeed from feed when NFT filter is cleared
-        const newFeed = filtered.filter((cast: any) => !tokenFeed.some(tokenCast => tokenCast.id === cast.id))
-        setFeed(newFeed)
-      } else {
-        setFeed(filtered)
-      }
-      setTokenFeed([])
-    }
-  }, [casts, filter, tokenFeed, fetchNFTHolders])
-
   useEffect(() => {
-    if(casts) {
-      applyFilters()
-    }
-  }, [filter, isFilterChanged, casts])
+    let mounted = true
 
-  useEffect(() => {
-    const handleFilterChange = () => {
-      setIsFilterChanged((prev) => !prev)
+    const processFeeds = async () => {
+      if (!casts?.length) return
+      
+      const filteredCasts = await applyFilters(casts)
+      if (mounted && filteredCasts.length !== feed.length) {
+        setFeed(filteredCasts)
+      }
     }
 
-    eventEmitter.on('filterChanged', handleFilterChange)
-    eventEmitter.on('filtersUpdated', handleFilterChange)
+    processFeeds()
 
     return () => {
-      eventEmitter.off('filterChanged', handleFilterChange)
-      eventEmitter.off('filtersUpdated', handleFilterChange)
+      mounted = false
     }
-  }, [])
+  }, [casts, applyFilters])
+
+  // Reset feed when filter changes
+  useEffect(() => {
+    setFeed([])
+  }, [filter])
+
+  useEffect(() => {
+    const handleFilterChange = (newFilter: Filter) => {
+      setFilter(newFilter);
+    }
+
+    eventEmitter.on('filtersUpdated', handleFilterChange);
+    eventEmitter.on('filterChanged', handleFilterChange);
+
+    return () => {
+      eventEmitter.off('filtersUpdated', handleFilterChange);
+      eventEmitter.off('filterChanged', handleFilterChange);
+    }
+  }, [setFilter]);
 
   const handleApply = () => {
     let newFilter = {
@@ -126,6 +161,7 @@ const ChannelScreen = () => {
       includeRecasts: true
     }
     setFilter(newFilter)
+    console.log('NEW FILTER', newFilter)
     AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
     if (Platform.OS === 'web') {
       localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
@@ -133,12 +169,14 @@ const ChannelScreen = () => {
     eventEmitter.emit('filterChanged', newFilter)
   }
 
+  console.log("FEED ", feed.length)
+
   return (
     <View style={styles.container}>
       {feed && feed.length > 0 && !isLoading ? (
         <FlashList
           contentContainerStyle={styles.flashList}
-          data={feed.reverse()}
+          data={[...feed].reverse()}
           renderItem={({ item, index }) => <Cast key={index} cast={item} />}
           keyExtractor={(_, index) => index.toString()}
           onEndReached={onEndReached}

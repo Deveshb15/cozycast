@@ -49,7 +49,7 @@ export default function SignInWithNeynar() {
         localStorage.setItem(LOCAL_STORAGE_KEYS.FARCASTER_USER, JSON.stringify(farcasterUser))
       }
       setFarcasterUser(farcasterUser)
-      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 404104}` as any)
+      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
     }
   }, [warpcastUser])
 
@@ -84,11 +84,11 @@ export default function SignInWithNeynar() {
         width={150}
       />
       {/* <Button title="Sign in with Neynar" onPress={() => {
-        setFid(404104)
+        setFid(4256)
         setSignerUuid('0x0')
         const farcasterUser = {
           signer_uuid: '0x0',
-          fid: 404104,
+          fid: 4256,
           fname: "deveshb15",
           displayName: "Devesh",
           profile: {
@@ -104,7 +104,7 @@ export default function SignInWithNeynar() {
           JSON.stringify(farcasterUser),
         )
         setFarcasterUser(farcasterUser)
-        router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 404104}` as any)
+        router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
       }} /> */}
     </View>
   )

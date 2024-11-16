@@ -50,51 +50,36 @@ const ChannelScreen = () => {
   const applyFilters = useCallback(async (castsToFilter: any[]) => {
     if (!castsToFilter?.length) return []
     
-    // Create a Set of existing cast hashes for deduplication
+    // Don't process if we already have these casts
     const existingHashes = new Set(feed.map(cast => cast.hash))
-    
-    // Only process casts that we haven't seen before
     const newCasts = castsToFilter.filter(cast => !existingHashes.has(cast.hash))
+    
     if (!newCasts.length) return feed
 
     let filtered = [...newCasts]
 
-    // Apply basic filters
-    filtered = filtered.filter(cast => {
-      const fid = cast?.author?.fid
-      const lowerFid = filter.lowerFid || 0
-      const upperFid = filter.upperFid === null ? Infinity : filter.upperFid
-      return fid >= lowerFid && fid <= upperFid
-    })
+    // Apply filters in sequence
+    if (filter.lowerFid || filter.upperFid) {
+      filtered = filterFeedBasedOnFID(filtered, filter.lowerFid, filter.upperFid)
+    }
 
     if (filter.showChannels?.length > 0) {
-      filtered = filtered.filter(cast => {
-        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-        return channelId && filter.showChannels.some((c: string) => c.toLowerCase() === channelId)
-      })
+      filtered = filterCastsBasedOnChannels(filtered, filter.showChannels)
     }
 
     if (filter.mutedChannels?.length > 0) {
-      filtered = filtered.filter(cast => {
-        const channelId = cast?.parent_url?.split('/').pop()?.toLowerCase()
-        return !filter.mutedChannels.some((c: string) => c.toLowerCase() === channelId)
-      })
+      filtered = filterCastsToMute(filtered, filter.mutedChannels)
     }
 
     if (filter.isPowerBadgeHolder) {
-      filtered = filtered.filter(cast => cast.author?.power_badge)
+      filtered = filtered.filter(cast => cast.author?.power_badge === true)
     }
 
-    if (!filter.includeRecasts) {
-      filtered = filtered.filter(cast => !cast?.reactions?.recasts_count)
-    }
-
-    // Handle NFT filters
+    // Handle NFT filters separately to avoid race conditions
     if (filter.nfts?.length > 0) {
       const nftResults = await Promise.all(
         filter.nfts.map((nft: any) => fetchNFTHolders(nft))
       )
-      
       const nftFeed = nftResults
         .flatMap(result => result?.feed?.casts || [])
         .filter(Boolean)
@@ -114,44 +99,51 @@ const ChannelScreen = () => {
 
   useEffect(() => {
     let mounted = true
+    let timeoutId: NodeJS.Timeout
 
     const processFeeds = async () => {
       if (!casts?.length) return
       
-      const filteredCasts = await applyFilters(casts)
-      if (mounted && filteredCasts.length !== feed.length) {
-        setFeed(filteredCasts)
-      }
+      // Debounce the filter application
+      clearTimeout(timeoutId)
+      timeoutId = setTimeout(async () => {
+        const filteredCasts = await applyFilters(casts)
+        if (mounted && filteredCasts?.length > 0) {
+          setFeed(filteredCasts)
+        }
+      }, 300)
     }
 
     processFeeds()
 
     return () => {
       mounted = false
+      clearTimeout(timeoutId)
     }
-  }, [casts, applyFilters])
+  }, [casts, filter])
 
-  // Reset feed when filter changes
-  useEffect(() => {
-    setFeed([])
-  }, [filter])
-
+  // Update the filter change handler
   useEffect(() => {
     const handleFilterChange = (newFilter: Filter) => {
-      setFilter(newFilter);
+      // Don't trigger a re-render if the filter hasn't actually changed
+      if (JSON.stringify(filter) === JSON.stringify(newFilter)) return
+      
+      setFilter(newFilter)
+      setFeed([]) // Reset feed only when filter actually changes
     }
 
-    eventEmitter.on('filtersUpdated', handleFilterChange);
-    eventEmitter.on('filterChanged', handleFilterChange);
+    eventEmitter.on('filtersUpdated', handleFilterChange)
+    eventEmitter.on('filterChanged', handleFilterChange)
 
     return () => {
-      eventEmitter.off('filtersUpdated', handleFilterChange);
-      eventEmitter.off('filterChanged', handleFilterChange);
+      eventEmitter.off('filtersUpdated', handleFilterChange)
+      eventEmitter.off('filterChanged', handleFilterChange)
     }
-  }, [setFilter]);
+  }, [filter, setFilter])
 
-  const handleApply = () => {
-    let newFilter = {
+  // Update handleApply to work consistently across platforms
+  const handleApply = useCallback(() => {
+    const newFilter = {
       lowerFid: 0,
       upperFid: Infinity,
       showChannels: [],
@@ -160,14 +152,16 @@ const ChannelScreen = () => {
       nfts: [],
       includeRecasts: true
     }
-    setFilter(newFilter)
-    console.log('NEW FILTER', newFilter)
-    AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+    
     if (Platform.OS === 'web') {
       localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
+    } else {
+      AsyncStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(newFilter))
     }
+    
+    setFilter(newFilter)
     eventEmitter.emit('filterChanged', newFilter)
-  }
+  }, [setFilter])
 
   console.log("FEED ", feed.length)
 

@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list'
 import _ from 'lodash'
-import React, { useCallback } from 'react'
-import { View, StyleSheet, ActivityIndicator } from 'react-native'
+import React, { useCallback, useEffect } from 'react'
+import { View, StyleSheet, ActivityIndicator, Platform } from 'react-native'
 import { useLatestCasts } from 'farcasterkit-react-native'
 import Cast from '../../components/Cast'
 
@@ -14,6 +14,17 @@ const TabOneScreen = () => {
       loadMore()
     }
   }, [isReachingEnd, loadMore])
+
+  useEffect(() => {
+    if(Platform.OS === 'web'){
+      // Only redirect once
+      const hasRedirected = sessionStorage.getItem('hasRedirected')
+      if (!hasRedirected) {
+        sessionStorage.setItem('hasRedirected', 'true')
+        window.location.href = '/channel?type=channel'
+      }
+    }
+  }, [])
 
   return (
     <View style={styles.container}>

@@ -414,14 +414,8 @@ const FilterModal = ({ visible, onClose }) => {
                   </View>
                 </View>
               )}
-<<<<<<< HEAD
                   <View style={styles.toggleContainer}>
               <View style={styles.toggleLabelContainer}>
-=======
-
-              {/* New toggle for Include Recasts */}
-              <View style={styles.toggleContainer}>
->>>>>>> b8c31ca0934ba95502c8399fee571ada7a034986
                 <Text style={styles.toggleLabel}>Include Recasts</Text>
                 <Switch
                   value={includeRecasts}

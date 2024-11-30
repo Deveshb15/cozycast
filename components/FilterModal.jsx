@@ -69,7 +69,13 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
 
   const saveFilters = async (filters) => {
     try {
+      // Save to AsyncStorage
       await storage.setItem(STORAGE_KEY, filters)
+      
+      // Also save to localStorage if on web
+      if (Platform.OS === 'web') {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(filters))
+      }
       return true
     } catch (error) {
       console.error('Error saving filters:', error)
@@ -190,6 +196,9 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
 
     // Clear storage
     const cleared = await storage.setItem(STORAGE_KEY, defaultFilters)
+    if (Platform.OS === 'web') {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.FILTERS, JSON.stringify(defaultFilters))
+    }
 
     if (cleared) {
       // Reset state

@@ -21,7 +21,6 @@ const TabOneScreen = () => {
       const hasRedirected = sessionStorage.getItem('hasRedirected')
       if (!hasRedirected) {
         sessionStorage.setItem('hasRedirected', 'true')
-        window.location.href = '/channel?type=channel'
       }
     }
   }, [])

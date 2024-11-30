@@ -49,19 +49,7 @@ const slides = [
 ]
 
 export default function IndexScreen() {
-  // const { farcasterUser } = useLogin()
-  let farcasterUser = {
-    signer_uuid: "",
-    fid: 404104,
-    fname: "deveshb15",
-    displayName: "Devesh",
-    profile: {
-      bio: "I break code",
-    },
-    pfp: "https://wrpcd.net/cdn-cgi/imagedelivery/BXluQx4ige9GuW0Ia56BHw/af0cd921-d2da-447f-8d04-96fe48907f00/anim=false,fit=contain,f=auto,w=336",
-    followerCount: 123,
-    followingCount: 432,
-  }
+  const { farcasterUser } = useLogin()
   const { fid, setFid, setFilter, setUser } = useAppContext()
   const [login, setLogin] = useState(false)
   const router = useRouter()

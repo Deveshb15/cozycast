@@ -90,14 +90,14 @@ const FeedComponent = ({ fid }) => {
     }
   }
 
-  const fetchCasts = async (type = FEED_TYPES.HOME_FEED, fid = 616) => {
+  const fetchCasts = async (type = FEED_TYPES.HOME_FEED, userFid = 616) => {
     try {
       setIsLoading(true)
       const apiKey = '9396240E-B23C-4A5E-AA62-412D555E6F13'
 
       let feedUrl
       if (type === FEED_TYPES.HOME_FEED) {
-        feedUrl = `https://api.neynar.com/v2/farcaster/feed?feed_type=following&fid=${fid}&limit=100&cursor=${cursor}`
+        feedUrl = `https://api.neynar.com/v2/farcaster/feed?feed_type=following&fid=${userFid}&limit=100&cursor=${cursor}`
       } else if (type === FEED_TYPES.GLOBAL_FEED) {
         feedUrl = `https://api.neynar.com/v2/farcaster/feed?feed_type=filter&filter_type=global_trending&with_recasts=true&limit=100&cursor=${cursor}`
       }

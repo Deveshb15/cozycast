@@ -5,19 +5,19 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
-  Dimensions
+  Dimensions,
 } from 'react-native'
 import SignInWithNeynar from '../components/SignInWithNeynar'
 import { Text, View } from '../components/Themed'
+import FeedComponent from '../components/FeedComponent'
 // import homepageHeader from '../assets/images/homepage-header.png';
 import ConnectAsGuest from '../components/ConnectAsGuest'
 import { FarcasterUser, useLogin } from 'farcasterkit-react-native'
-import { useRouter } from 'expo-router'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useAppContext from '../hooks/useAppContext'
 import { LOCAL_STORAGE_KEYS } from '../constants/Farcaster'
 import WebSignIn from '../components/WebSignIn'
-import { NeynarAuthButton, useNeynarContext } from "@neynar/react";
+import { NeynarAuthButton, useNeynarContext } from '@neynar/react'
 import { eventEmitter } from '../utils/event'
 import { Filter } from '../types/filter'
 
@@ -25,22 +25,15 @@ export default function IndexScreen() {
   const { farcasterUser } = useLogin()
   const { fid, setFid, setFilter, setUser } = useAppContext()
   const [login, setLogin] = useState(false)
-  const router = useRouter()
-  const { user } = useNeynarContext();
+  const { user } = useNeynarContext()
 
-  useEffect(() => {
-    if (farcasterUser) {
-      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
-    }
-  }, [farcasterUser])
+  const screenWidth = Dimensions.get('window').width
 
-  const screenWidth = Dimensions.get('window').width;
-
-  const isMobileDevice = screenWidth <= 768;
+  const isMobileDevice = screenWidth <= 768
 
   console.log('isMobileDevice', isMobileDevice)
 
-  console.log('user', user)
+  console.log('user in index', user)
   useEffect(() => {
     const loadInitialData = async () => {
       try {
@@ -51,7 +44,7 @@ export default function IndexScreen() {
         } else {
           filters = await AsyncStorage.getItem(LOCAL_STORAGE_KEYS.FILTERS)
         }
-        
+
         if (filters) {
           const parsedFilters = JSON.parse(filters)
           setFilter(parsedFilters)
@@ -87,40 +80,59 @@ export default function IndexScreen() {
     }
   }, [setFilter])
 
-  const buttonLabel = (label: string | number | boolean | React.ReactElement<any, string | React.JSXElementConstructor<any>> | Iterable<React.ReactNode> | null | undefined) => {
-    return(
-      <View style={{
-        padding: 12,
-        backgroundColor: 'white'
-      }}>
-        <Text style={{
-          color: 'black',
-          fontWeight: '600',
-          fontSize: 26,
-        }}>
+  const buttonLabel = (
+    label:
+      | string
+      | number
+      | boolean
+      | React.ReactElement<any, string | React.JSXElementConstructor<any>>
+      | Iterable<React.ReactNode>
+      | null
+      | undefined,
+  ) => {
+    return (
+      <View
+        style={{
+          padding: 12,
+          backgroundColor: 'white',
+        }}
+      >
+        <Text
+          style={{
+            color: 'black',
+            fontWeight: '600',
+            fontSize: 26,
+          }}
+        >
           {label}
         </Text>
       </View>
     )
   }
-  
+
   return (
     <SafeAreaView style={styles.container}>
       {/* <Image style={styles.homepageHeader} source={homepageHeader} resizeMode="contain" /> */}
-    
-    
-   <View style={styles.textContainer}>
-        <Text style={styles.title}>Cozycast</Text>
-        <Text style={styles.subtitle}>
-          A beautiful yet simple Farcaster client
-        </Text>
-        <View>
-        <View className="web-sign-in-container" style={{ backgroundColor: 'white'}}>
-          <WebSignIn />
+
+      {user ? (
+        <FeedComponent fid={user.fid} />
+      ) : (
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>Cozycast</Text>
+          <Text style={styles.subtitle}>
+            A beautiful yet simple Farcaster client
+          </Text>
+          <View>
+            <View
+              className="web-sign-in-container"
+              style={{ backgroundColor: 'white' }}
+            >
+              <WebSignIn />
+            </View>
+          </View>
         </View>
-        </View>
-        </View>
-        </SafeAreaView>
+      )}
+    </SafeAreaView>
   )
 }
 

@@ -49,26 +49,20 @@ export default function WebSignIn() {
         localStorage.setItem(LOCAL_STORAGE_KEYS.FARCASTER_USER, JSON.stringify(farcasterUser))
       }
     //   setFarcasterUser(farcasterUser)
-      router.push('/(tabs)')
+      // router.push('/(tabs)')
       setFid(Number(user.fid))
       setSignerUuid(user.signer_uuid)
   
     }
   }, [user])
 
-
-
-  console.log('user', user)
-
-
   const handleError = (err: Error) => {
     console.log(err)
   }
+
   return (
     <View style={styles.container}>
               <NeynarAuthButton style={{backgroundColor:'white', background:'white'}} />
-
-
     </View>
   )
 }

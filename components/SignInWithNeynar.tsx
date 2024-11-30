@@ -45,7 +45,7 @@ export default function SignInWithNeynar() {
         JSON.stringify(farcasterUser),
       )
       setFarcasterUser(farcasterUser)
-      router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
+      // router.push(`/(tabs)/channel?type=channel&fid=${farcasterUser?.fid ?? 4256}` as any)
     }
   }, [warpcastUser])
 

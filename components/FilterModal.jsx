@@ -286,36 +286,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
   }
 
   const handleClose = async () => {
-    if (await hasUnsavedChanges()) {
-      Alert.alert(
-        'Unsaved Changes',
-        'You have unsaved filter changes. Do you want to save them before closing?',
-        [
-          {
-            text: 'Discard',
-            onPress: () => {
-              loadSavedFilters() // Reset to saved state
-              toast.success('Changes discarded', {
-                duration: 2000,
-                position: Platform.OS === 'web' ? 'bottom-center' : 'bottom',
-              })
-              onClose()
-            },
-            style: 'destructive',
-          },
-          {
-            text: 'Save',
-            onPress: async () => {
-              await handleApply()
-              onClose()
-            },
-          },
-        ],
-        { cancelable: true }
-      )
-    } else {
-      onClose()
-    }
+    onClose()
   }
 
   const handleStorageError = (error) => {

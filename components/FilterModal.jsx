@@ -52,13 +52,14 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
       const savedFilters = await storage.getItem(STORAGE_KEY)
       if (savedFilters) {
         setMinFID(savedFilters.minFID || 0)
-        setMaxFID(savedFilters.maxFID || Infinity)
+        setMaxFID(savedFilters.maxFID === null || savedFilters.maxFID === undefined ? Infinity : savedFilters.maxFID)
         setSelectedChannels(savedFilters.selectedChannels || [])
         setSelectedMutedChannels(savedFilters.mutedChannels || [])
         setIsPowerBadgeHolder(savedFilters.isPowerBadgeHolder || false)
         setIncludeRecasts(
           savedFilters.includeRecasts !== undefined ? savedFilters.includeRecasts : true
         )
+        setSelectedNFTs(savedFilters.selectedNFTs || [])
       }
     } catch (error) {
       console.error('Error loading saved filters:', error)
@@ -102,7 +103,6 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
           },
         )
         data = response.data
-        console.log('Contract metadata:', response.data)
         let newData = {
           chain: 'base',
           ...data,
@@ -125,6 +125,19 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
       setIsLoadingMetadata(false)
     }
   }, [])
+
+  const handleAddContractNFT = () => {
+    if (contractMetadata) {
+      const newNFT = {
+        id: contractAddress,
+        name: contractMetadata.name || 'Unknown Name',
+        address: contractAddress,
+      }
+      setSelectedNFTs([...selectedNFTs, newNFT])
+      setContractAddress('')
+      setContractMetadata(null)
+    }
+  }
 
   const handleContractAddressChange = useCallback(
     (text) => {
@@ -172,6 +185,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
       selectedChannels: [],
       mutedChannels: [],
       includeRecasts: true,
+      selectedNFTs: [],
     }
 
     // Clear storage
@@ -201,19 +215,23 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
   const handleApply = async () => {
     const filters = {
       minFID: Number(minFID) || 0,
-      maxFID,
+      maxFID: maxFID === Infinity ? null : maxFID,
       isPowerBadgeHolder,
       selectedChannels,
       mutedChannels: selectedMutedChannels,
       includeRecasts,
+      selectedNFTs,
     }
     
     // Save filters to storage
     const saved = await saveFilters(filters)
     
     if (saved) {
-      // Apply filters
-      onApplyFilters(filters)
+      // Convert null back to Infinity when passing to parent
+      onApplyFilters({
+        ...filters,
+        maxFID: filters.maxFID === null ? Infinity : filters.maxFID
+      })
       
       // Show success toast with filter summary
       const filterSummary = []
@@ -222,6 +240,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
       if (filters.isPowerBadgeHolder) filterSummary.push('Power Badge Holders')
       if (filters.selectedChannels.length) filterSummary.push(`${filters.selectedChannels.length} channels`)
       if (filters.mutedChannels.length) filterSummary.push(`${filters.mutedChannels.length} muted`)
+      if (filters.selectedNFTs.length) filterSummary.push(`${filters.selectedNFTs.length} NFTs`)
       if (!filters.includeRecasts) filterSummary.push('No recasts')
 
       const message = filterSummary.length 
@@ -247,6 +266,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
         selectedChannels,
         mutedChannels: selectedMutedChannels,
         includeRecasts,
+        selectedNFTs,
       }
 
       return JSON.stringify(savedFilters) !== JSON.stringify(currentFilters)
@@ -308,7 +328,7 @@ const FilterModal = ({ visible, onClose, onApplyFilters }) => {
     }, 1000),
     [],
   )
-  
+
   const debouncedMuteSearch = useCallback(
     debounce(async (text) => {
       const { channels } = await useSearchChannel(text)

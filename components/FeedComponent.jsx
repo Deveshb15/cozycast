@@ -1,5 +1,5 @@
-import { StyleSheet, View, TouchableOpacity, Text, ActivityIndicator } from 'react-native'
-import { useCallback, useEffect, useState } from 'react'
+import { StyleSheet, View, TouchableOpacity, Text, ActivityIndicator, RefreshControl } from 'react-native'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { FlashList } from '@shopify/flash-list'
 import Cast from './Cast'
 import FilterModal from './FilterModal'
@@ -7,6 +7,7 @@ import { Notifications } from './Notification'
 import { FontAwesome } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import toast from 'react-hot-toast/headless'
+import axios from 'axios'
 
 const FEED_TYPES = {
   HOME_FEED: 'home',
@@ -28,11 +29,20 @@ const FeedComponent = ({ fid }) => {
     selectedChannels: [],
     mutedChannels: [],
     includeRecasts: true,
+    selectedNFTs: [],
   })
+  const [nftCasts, setNftCasts] = useState([])
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     loadSavedFilters()
   }, [])
+
+  useEffect(() => {
+    if (filters.selectedNFTs?.length > 0) {
+      fetchNFTCasts()
+    }
+  }, [filters.selectedNFTs])
 
   const loadSavedFilters = async () => {
     try {
@@ -110,24 +120,59 @@ const FeedComponent = ({ fid }) => {
     }
   }
 
-  const filterCasts = (castsToFilter) => {
+  const fetchNFTHolders = useCallback(async (nft) => {
+    try {
+      const response = await axios.get(`https://cozycast-backend.vercel.app/nft-holders/${nft.address}`)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching NFT holders:', error)
+      return { feed: { casts: [] } }
+    }
+  }, [])
+
+  const fetchNFTCasts = useCallback(async () => {
+    try {
+      const nftResults = await Promise.all(
+        filters.selectedNFTs.map(nft => fetchNFTHolders(nft))
+      )
+
+      const existingHashes = new Set(casts.map(cast => cast.hash))
+      const newNFTCasts = nftResults
+        .flatMap(result => result?.feed?.casts || [])
+        .filter(Boolean)
+        .filter(cast => !existingHashes.has(cast.hash))
+
+      setNftCasts(newNFTCasts)
+    } catch (error) {
+      console.error('Error fetching NFT casts:', error)
+      showErrorToast('Failed to fetch NFT casts')
+    }
+  }, [filters.selectedNFTs, casts, fetchNFTHolders])
+
+  const filterCasts = useCallback((castsToFilter) => {
     if (!castsToFilter) return []
     
-    return castsToFilter.filter(cast => {
+    // Only include NFT casts in home feed
+    let allCasts = activeTab === FEED_TYPES.HOME_FEED 
+      ? [...nftCasts, ...castsToFilter]
+      : [...castsToFilter]
+    
+    return allCasts.filter(cast => {
       if (!cast?.author) return false
       
-      // FID Range filter
+      // FID Range filter - Only apply if values are set
       const authorFid = cast.author.fid
-      if (authorFid < filters.minFID || (filters.maxFID !== Infinity && authorFid > filters.maxFID)) {
+      if ((filters.minFID > 0 && authorFid < filters.minFID) || 
+          (filters.maxFID !== null && filters.maxFID !== Infinity && authorFid > filters.maxFID)) {
         return false
       }
 
-      // Power Badge filter
+      // Power Badge filter - Only apply if enabled
       if (filters.isPowerBadgeHolder && !cast.author.power_badge) {
         return false
       }
 
-      // Channel filters
+      // Channel filters - Only apply if channels are selected
       if (filters.selectedChannels.length > 0) {
         if (!cast.channel || !filters.selectedChannels.includes(cast.channel.name)) {
           return false
@@ -146,7 +191,7 @@ const FeedComponent = ({ fid }) => {
 
       return true
     })
-  }
+  }, [nftCasts, filters, activeTab])
 
   const loadMore = () => {
     if (!isLoading && cursor) {
@@ -161,6 +206,22 @@ const FeedComponent = ({ fid }) => {
       fetchCasts(activeTab, fid)
     }
   }, [activeTab, fid])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    setCasts([])
+    setCursor('')
+    setNftCasts([])
+    
+    try {
+      await fetchCasts(activeTab, fid)
+      if (filters.selectedNFTs?.length > 0) {
+        await fetchNFTCasts()
+      }
+    } finally {
+      setRefreshing(false)
+    }
+  }, [activeTab, fid, filters.selectedNFTs, fetchNFTCasts])
 
   const renderContent = () => {
     const filteredCasts = filterCasts(casts)
@@ -208,6 +269,15 @@ const FeedComponent = ({ fid }) => {
         estimatedItemSize={150}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#007AFF"
+            colors={["#007AFF"]} // Android
+            progressBackgroundColor="#ffffff" // Android
+          />
+        }
         ListFooterComponent={
           isLoading ? (
             <View style={styles.footerLoader}>
@@ -218,6 +288,7 @@ const FeedComponent = ({ fid }) => {
       />
     )
   }
+
 
   return (
     <View style={styles.container}>
